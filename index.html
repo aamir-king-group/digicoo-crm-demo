@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digitalcoo CRM — Demo (e& Channel Partner)</title>
+<style>
+:root{
+  --bg:#0f1623; --panel:#161f30; --panel2:#1d293d; --line:#2a3650;
+  --txt:#e7edf7; --muted:#93a1bd; --brand:#e30613; --brand2:#ff3b4e;
+  --green:#1db954; --amber:#f6b73c; --blue:#3b82f6; --purple:#8b5cf6;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+a{color:var(--brand2);text-decoration:none}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:9px 14px;font-weight:600;font-size:13px}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand2)}
+.btn-ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--brand2)}
+input,select,textarea{font-family:inherit;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px;width:100%}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;background:var(--panel)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.scroll{overflow:auto;max-height:62vh;border:1px solid var(--line);border-radius:var(--radius)}
+
+/* Login */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 600px at 70% -10%,#26344f,#0f1623)}
+.login-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:34px;width:380px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.logo{font-weight:800;font-size:22px;letter-spacing:-.5px}
+.logo span{color:var(--brand2)}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.role-btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:left;color:var(--txt)}
+.role-btn:hover{border-color:var(--brand2)}
+.role-btn b{display:block;font-size:13px}
+.role-btn small{color:var(--muted);font-size:11px}
+
+/* App shell */
+#app{display:none;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--muted);font-weight:600;cursor:pointer;margin-bottom:2px}
+.nav-item:hover{background:var(--panel2);color:var(--txt)}
+.nav-item.active{background:var(--brand);color:#fff}
+.nav-item .ic{width:18px;text-align:center}
+.nav-sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5c6c8c;margin:14px 8px 6px}
+.main{padding:20px 26px;overflow:auto;height:100vh}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.topbar h1{font-size:20px;margin:0}
+.who{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+
+/* Cards / KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .val{font-size:26px;font-weight:800;margin-top:4px}
+.kpi .sub{font-size:12px;margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:15px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row>div{flex:1;min-width:140px}
+.bar{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--green)}
+
+/* Pipeline kanban */
+.kanban{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow-x:auto}
+.kcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:120px}
+.kcol h4{font-size:11px;margin:4px 6px 8px;color:var(--muted)}
+.kcard{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--brand2);border-radius:8px;padding:8px;margin-bottom:7px;font-size:12px;cursor:grab}
+.kcard b{display:block;font-size:12px;margin-bottom:3px}
+.kcard small{color:var(--muted)}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(5,8,15,.65);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;width:520px;max-height:88vh;overflow:auto}
+.muted{color:var(--muted)}
+.right{text-align:right}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{background:transparent;color:var(--muted);border-radius:0;padding:8px 14px}
+.seg button.on{background:var(--brand);color:#fff}
+.report{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:18px;line-height:1.6;font-size:13px}
+.report h2{font-size:16px;margin:0 0 4px}
+.report .meta{color:var(--muted);font-size:12px;margin-bottom:12px}
+.report ul{margin:6px 0 12px;padding-left:18px}
+.flag{padding:8px 12px;border-radius:8px;margin:6px 0;font-size:13px}
+.flag.good{background:rgba(29,185,84,.12);border-left:3px solid var(--green)}
+.flag.warn{background:rgba(246,183,60,.12);border-left:3px solid var(--amber)}
+.flag.bad{background:rgba(227,6,19,.14);border-left:3px solid var(--brand2)}
+.badge{font-size:10px;background:var(--purple);color:#fff;padding:1px 7px;border-radius:20px;margin-left:6px}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.toolbar input,.toolbar select{width:auto}
+.demobar{background:rgba(246,183,60,.12);border:1px solid var(--amber);color:var(--amber);padding:9px 14px;border-radius:8px;font-size:12px;margin-bottom:14px;font-weight:600}
+tr.frow th{position:sticky;top:31px;background:var(--panel2);padding:4px 6px;z-index:1}
+input.colf{padding:4px 7px;font-size:11px;font-weight:400;background:var(--bg);border:1px solid var(--line)}
+input.colf::placeholder{color:#5c6c8c}
+.dupwarn{display:inline-block;color:#fff;background:var(--brand);border-radius:6px;padding:5px 8px;font-weight:700;cursor:pointer;margin-right:4px;font-size:12px}
+.kebab{padding:9px 11px}
+.menubackdrop{position:fixed;inset:0;z-index:60}
+.menucard{position:fixed;z-index:61;background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:0 12px 34px rgba(0,0,0,.55);min-width:200px;padding:6px}
+.menucard .mi{display:block;width:100%;text-align:left;background:transparent;color:var(--txt);padding:9px 11px;border-radius:6px;font-weight:600;font-size:13px}
+.menucard .mi:hover{background:var(--panel2)}
+.menucard .mi.disabled{color:var(--muted);cursor:default}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <div class="login-card">
+    <div class="logo">Digi<span>coo</span> CRM</div>
+    <p class="muted" style="margin:6px 0 18px">e& Authorised Channel Partner — Operations Platform <span class="badge">DEMO</span></p>
+    <label>Sign in as a role to see permissions in action</label>
+    <div class="role-grid" id="roleGrid"></div>
+    <p class="muted" style="font-size:11px;margin-top:16px">Sample data only. Everything is editable. Your data stays in this browser.</p>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <aside class="side">
+    <div class="logo" style="font-size:18px;padding:6px 8px 14px">Digi<span>coo</span> CRM</div>
+    <div id="nav"></div>
+    <div style="margin-top:auto">
+      <div class="nav-item" onclick="resetDemo()"><span class="ic">↺</span> Reset demo data</div>
+      <div class="nav-item" onclick="logout()"><span class="ic">⎋</span> Switch role / Logout</div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <div class="who">
+        <div class="right"><div id="whoName" style="font-weight:700"></div><div class="muted" id="whoRole" style="font-size:12px"></div></div>
+        <div class="avatar" id="whoAv">A</div>
+      </div>
+    </div>
+    <div class="demobar">⚠ DEMO — sample data only. Your changes are saved in your own browser and are not shared with others. Use “Reset demo data” anytime.</div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div id="modalHost"></div>
+<div id="menuHost"></div>
+
+<script>
+/* ============================================================
+   DIGITALCOO CRM — DEMO PROTOTYPE
+   Single-file. Data persists in browser (localStorage).
+   ============================================================ */
+
+const PIPE_STAGES = ["10%- Prospect","30% - Value Prop","50% - Negotiation","70% - Finalizing","90% - Closing","100% - Deal Won","0% - Lost"];
+const CALL_STATUS = ["Interested","FollowUp","Not interested","Using etisalat","Using DU","Voicemail","No answer","Number not in use"];
+const ORDER_STATUS = ["Submitted","E& In-process","BO Pending","Activated","Closed","On Hold","Cancelled","Returned"];
+const PRODUCTS = [
+  {cat:"GSM (Mobile)", title:"Business First Plus"},
+  {cat:"GSM (Mobile)", title:"Business Extreme"},
+  {cat:"Fixed", title:"SOHO3"},
+  {cat:"Fixed", title:"Business On4"},
+  {cat:"Wireless", title:"IP Connect Access5"},
+  {cat:"Digital", title:"Digital Internet"}
+];
+
+const ROLES = {
+  admin:       {name:"Administrator"},
+  sales_head:  {name:"Sales Head"},
+  teams_head:  {name:"Teams Head"},
+  team_leader: {name:"Team Leader"},
+  agent:       {name:"Sales Agent"},
+  backoffice:  {name:"Back Office"},
+  accountant:  {name:"Accountant"},
+  hr:          {name:"HR"}
+};
+// Default module access per role — EDITABLE by Admin at runtime (stored in DB.access)
+const ACCESS_DEFAULT = {
+  admin:      ["dash","dsr","pipeline","backoffice","mis","hr","payroll","accounting","ai","admin"],
+  sales_head: ["dash","pipeline","mis","ai"],
+  teams_head: ["dash","pipeline","mis","ai"],
+  team_leader:["dash","dsr","pipeline","mis","ai"],
+  agent:      ["dash","dsr","pipeline"],
+  backoffice: ["dash","backoffice","mis","ai"],
+  accountant: ["dash","accounting","payroll","ai"],
+  hr:         ["dash","hr","payroll","ai"]
+};
+// Special capabilities (granular permissions) — EDITABLE by Admin (stored in DB.caps)
+const CAP_DEFAULT = {
+  manage_users: ["admin"],            // create / edit employees & user accounts
+  run_payroll:  ["admin","accountant"],
+  manage_access:["admin"],            // edit the RBAC matrix
+  import_leads: ["admin","agent","team_leader"]
+};
+const CAP_LABEL = {
+  manage_users:"Create / manage user accounts",
+  run_payroll:"Run payroll (WPS)",
+  manage_access:"Edit roles & access",
+  import_leads:"Add / import calling data"
+};
+
+const NAVDEF = {
+  dash:{t:"Dashboard",ic:"▣"}, dsr:{t:"DSR — Agent",ic:"☎"},
+  pipeline:{t:"Sales Pipeline",ic:"⚲"}, backoffice:{t:"Back Office / Orders",ic:"☑"},
+  mis:{t:"MIS & Targets",ic:"▦"}, hr:{t:"HR",ic:"❖"}, payroll:{t:"Payroll",ic:"₳"},
+  accounting:{t:"Accounting",ic:"₿"}, ai:{t:"AI Reports",ic:"✦"}, admin:{t:"Admin / Settings",ic:"⚙"}
+};
+
+/* ---------- Seed data ---------- */
+function seed(){
+  const employees=[
+    // Agents (reportsTo = their Team Leader)
+    {id:"E01",name:"Hira",role:"agent",desig:"Sales Agent",tl:"Joy",reportsTo:"Joy",target:5000,salary:4000,join:"2026-01-05",dept:"e& Sales"},
+    {id:"E02",name:"Vani",role:"agent",desig:"Sales Agent",tl:"Joy",reportsTo:"Joy",target:5000,salary:4000,join:"2026-01-15",dept:"e& Sales"},
+    {id:"E03",name:"OB",role:"agent",desig:"Sales Agent",tl:"Maria",reportsTo:"Maria",target:7000,salary:4500,join:"2025-11-10",dept:"e& Sales"},
+    {id:"E04",name:"Samjith",role:"agent",desig:"Sr. Sales Agent",tl:"Maria",reportsTo:"Maria",target:6000,salary:5000,join:"2025-09-01",dept:"e& Sales"},
+    {id:"E05",name:"Kiran",role:"agent",desig:"Sales Agent",tl:"Rahul",reportsTo:"Rahul",target:5000,salary:4000,join:"2026-02-01",dept:"e& Sales"},
+    // Team Leaders (reportsTo = Teams Head)
+    {id:"E06",name:"Joy",role:"team_leader",desig:"Team Leader — Team A",tl:"-",reportsTo:"Sana",target:25000,salary:8000,join:"2025-06-01",dept:"e& Sales"},
+    {id:"E07",name:"Maria",role:"team_leader",desig:"Team Leader — Team B",tl:"-",reportsTo:"Sana",target:30000,salary:8500,join:"2025-03-01",dept:"e& Sales"},
+    {id:"E08",name:"Rahul",role:"team_leader",desig:"Team Leader — Team C",tl:"-",reportsTo:"Sana",target:20000,salary:8000,join:"2026-01-20",dept:"e& Sales"},
+    // Teams Head (reportsTo = Sales Head) — can be multiple
+    {id:"E09",name:"Sana",role:"teams_head",desig:"Teams Head — Group 1",tl:"-",reportsTo:"Amir Qadri",target:75000,salary:12000,join:"2025-02-01",dept:"e& Sales"},
+    // Sales Head (top of sales)
+    {id:"E10",name:"Amir Qadri",role:"sales_head",desig:"Sales Head",tl:"-",reportsTo:"-",target:150000,salary:20000,join:"2025-01-01",dept:"e& Sales"},
+    // Support functions
+    {id:"E11",name:"Ansari",role:"backoffice",desig:"Back Office Executive",tl:"-",reportsTo:"Amir Qadri",target:0,salary:5500,join:"2025-08-01",dept:"Operations"},
+    {id:"E12",name:"ABC",role:"accountant",desig:"Accountant",tl:"-",reportsTo:"Admin",target:0,salary:9000,join:"2025-05-01",dept:"Finance"},
+    {id:"E13",name:"Fatima",role:"hr",desig:"HR Officer",tl:"-",reportsTo:"Admin",target:0,salary:8500,join:"2025-04-01",dept:"HR"},
+    {id:"E14",name:"Admin",role:"admin",desig:"System Administrator",tl:"-",reportsTo:"-",target:0,salary:0,join:"2025-01-01",dept:"Management"}
+  ];
+  const companies=["PURE EARTH EQUIPMENT","LUTECH COMPOSITES","AL SAMIAH CARPETS","DARK REAL ESTATE","TRUSV AIR DUCT","PACKNEXA INDUSTRIES","MEAMAR BUILDING","SUNLUX ELECTROMECH","TECTONIC ELECTROMECH","SKY & SEA INTL","BRAVA TECHNO","IPS CERTIFICATION","LIVENDO PROPERTIES","AENAV","ORTEK MEDICAL","CAPITAL ZONE DELIVERY","AL REWAYA TYPING","QABIL GROUP","SMART SENSE SUPPLIES","WEST ONE TRADING"];
+  const agents=["Hira","Vani","OB","Samjith","Kiran"];
+  const tlMap={Hira:"Joy",Vani:"Joy",OB:"Maria",Samjith:"Maria",Kiran:"Rahul"};
+  const dsr=[], pipeline=[], orders=[];
+  let pno=1, ono=1, seq=0;
+  const dno=()=>"DSR-"+String(++seq).padStart(5,'0');
+  const remarks=["Using etisalat already","He is busy, call later","Interested in 3 SIM cards","Wants data plan 30GB","Voicemail left","Asked to send proposal","Number not in use","Already with DU wireless"];
+  for(let i=0;i<90;i++){
+    const ag=agents[i%agents.length];
+    const st=CALL_STATUS[i%CALL_STATUS.length];
+    const d=new Date(2026,5,1+ (i%24));
+    dsr.push({id:"D"+(i+1),dsrNo:dno(),date:d.toISOString().slice(0,10),agent:ag,company:companies[i%companies.length]+" "+(i+1),building:["Abdul Razaq Ali","Bin Dasmal","Microbuilt","Advance Tech"][i%4],contactNo:"9715"+(20000000+i*131),customer:["Mr Ali","Anjlika","Usman","Eylan","Neha","Akbar"][i%6],status:st,remarks:remarks[i%remarks.length],connected:(st==="No answer"||st==="Voicemail")?"NO":"YES",history:[{ts:d.toLocaleDateString('en-GB')+" 09:00",user:ag,stage:"DSR",text:"DSR created · status set to "+st}]});
+  }
+  // Inject a few cross-agent duplicates (same company + number called later by another agent) to demonstrate the duplicate alert
+  [[3,"Vani"],[10,"OB"],[18,"Samjith"],[25,"Hira"]].forEach(([idx,ag2],k)=>{
+    const src=dsr[idx];
+    dsr.unshift({id:"DUP"+k,dsrNo:dno(),date:"2026-06-2"+(2+k),agent:ag2,company:src.company,building:src.building,contactNo:src.contactNo,customer:src.customer,status:"FollowUp",remarks:"Re-contacting same company",connected:"YES",history:[{ts:"2"+(2+k)+" Jun 2026 10:00",user:ag2,stage:"DSR",text:"DSR created · status set to FollowUp"}]});
+  });
+  for(let i=0;i<22;i++){
+    const ag=agents[i%agents.length];
+    const pr=PRODUCTS[i%PRODUCTS.length];
+    const qty=1+(i%6); const price=[100,150,200,395,475,600][i%6]; const mrc=qty*price;
+    pipeline.push({id:"P"+(pno++),dsrNo:dno(),date:"2026-06-"+String(2+i%26).padStart(2,'0'),cp:"DIGI COO",customer:["Mr Jarien","Akbar","Mr Jahir","Anjlika","Usman","Eylan","Mr Ali"][i%7],company:companies[i%companies.length]+" "+(i+1),cat:pr.cat,product:pr.title,price:price,qty:qty,mrc:mrc,annual:mrc*12,stage:PIPE_STAGES[i%PIPE_STAGES.length],agent:ag,tl:tlMap[ag],escalated:false,remarks:remarks[i%remarks.length]});
+  }
+  for(let i=0;i<30;i++){
+    const ag=agents[i%agents.length];
+    const pr=PRODUCTS[i%PRODUCTS.length];
+    const qty=1+(i%8); const price=[100,200,300,395,600][i%5]; const mrc=qty*price;
+    const st=ORDER_STATUS[i%ORDER_STATUS.length];
+    const sub=new Date(2026,4+(i%2),2+(i%26));
+    orders.push({id:"O"+(ono++),dsrNo:dno(),subDate:sub.toISOString().slice(0,10),contact:["Amer","MD Armanul","Qasim","Ali","Neha"][i%5],contactNo:"58"+(2000000+i),customer:companies[i%companies.length]+" "+(i+1),pid:"535"+(50000+i),ord:"ORD-44"+(70000+i)+"-X"+i,sr:i%2?"NEW":"MNP",cat:pr.cat,product:pr.title,contract:"12 Months",qty:qty,mrc:mrc,agent:ag,tl:tlMap[ag],eAcctMgr:"Ankit",status:st,actDate:(st==="Activated"||st==="Closed")?new Date(2026,5,3+i%25).toISOString().slice(0,10):"",commission:Math.round(mrc*0.15),remarks:st==="On Hold"?"Awaiting documents":st==="Cancelled"?"Customer withdrew":""});
+  }
+  const invoices=[
+    {id:"INV-2601",date:"2026-04-30",party:"e& (Etisalat)",type:"Commission Income",net:48500,vat:2425,total:50925,status:"Paid"},
+    {id:"INV-2602",date:"2026-05-31",party:"e& (Etisalat)",type:"Commission Income",net:53200,vat:2660,total:55860,status:"Paid"},
+    {id:"INV-2603",date:"2026-06-20",party:"e& (Etisalat)",type:"Commission Income",net:41750,vat:2087.5,total:43837.5,status:"Outstanding"},
+    {id:"BILL-118",date:"2026-06-05",party:"Office Rent - Business Bay",type:"Expense",net:18000,vat:900,total:18900,status:"Paid"},
+    {id:"BILL-119",date:"2026-06-10",party:"Telecom & Internet",type:"Expense",net:3200,vat:160,total:3360,status:"Paid"}
+  ];
+  const access=JSON.parse(JSON.stringify(ACCESS_DEFAULT));
+  const caps=JSON.parse(JSON.stringify(CAP_DEFAULT));
+  return {employees,dsr,pipeline,orders,invoices,access,caps,counters:{dsr:seq}};
+}
+
+const DBKEY="digicoo_db_v6";
+let DB = load();
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); }
+// Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
+function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
+const dsrSeqNum=no=>parseInt(String(no||"").replace(/\D/g,""))||0;
+// ---- Audit log / change history (immutable trail) ----
+const nowTs=()=>new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+function addLog(entry,text,stage){ if(!entry)return; (entry.history=entry.history||[]).push({ts:nowTs(),user:(SESSION&&SESSION.name)||'system',stage:stage||'DSR',text}); }
+function logByDsrNo(no,text,stage){ addLog(DB.dsr.find(x=>x.dsrNo===no),text,stage); }
+function resetDemo(){ if(confirm("Reset all demo data to original sample?")){ DB=seed(); save(); render(); } }
+
+let SESSION=null;
+let CURRENT="dash";
+
+/* ---------- Helpers ---------- */
+const AED=n=>"AED "+Math.round(n||0).toLocaleString();
+const $=id=>document.getElementById(id);
+function statusColor(s){
+  if(/Interested|Activated|Closed|100%|Deal Won|Paid/i.test(s)) return "var(--green)";
+  if(/FollowUp|Negotiation|Finalizing|Closing|In-process|Submitted|Outstanding|Pending|Prospect|Value/i.test(s)) return "var(--amber)";
+  if(/Not interested|Lost|Cancelled|Returned|No answer|not in use/i.test(s)) return "var(--brand2)";
+  if(/Hold/i.test(s)) return "var(--purple)";
+  return "var(--blue)";
+}
+const tag=s=>`<span class="tag" style="background:${statusColor(s)}22;color:${statusColor(s)}">${s}</span>`;
+
+/* ---------- Login ---------- */
+function renderLogin(){
+  const g=$("roleGrid"); g.innerHTML="";
+  const map=[["agent","Hira"],["team_leader","Joy"],["teams_head","Sana"],["sales_head","Amir Qadri"],["backoffice","Ansari"],["accountant","ABC"],["hr","Fatima"],["admin","Admin"]];
+  map.forEach(([r,nm])=>{
+    const b=document.createElement("button"); b.className="role-btn";
+    b.innerHTML=`<b>${nm}</b><small>${ROLES[r].name}</small>`;
+    b.onclick=()=>doLogin(r,nm); g.appendChild(b);
+  });
+}
+function doLogin(role,name){
+  SESSION={role,name};
+  $("login").style.display="none";
+  $("app").style.display="grid";
+  $("whoName").textContent=name; $("whoRole").textContent=ROLES[role].name;
+  $("whoAv").textContent=name[0];
+  CURRENT="dash"; renderNav(); render();
+}
+function logout(){ SESSION=null; $("app").style.display="none"; $("login").style.display="flex"; }
+
+function renderNav(){
+  const nav=$("nav"); nav.innerHTML="";
+  (DB.access[SESSION.role]||[]).forEach(k=>{
+    const d=NAVDEF[k];
+    const el=document.createElement("div");
+    el.className="nav-item"+(k===CURRENT?" active":"");
+    el.innerHTML=`<span class="ic">${d.ic}</span> ${d.t}`;
+    el.onclick=()=>{CURRENT=k; renderNav(); render();};
+    nav.appendChild(el);
+  });
+}
+function render(){
+  $("pageTitle").textContent=NAVDEF[CURRENT].t;
+  $("view").innerHTML = ({
+    dash:viewDash, dsr:viewDSR, pipeline:viewPipeline,
+    backoffice:viewBackoffice, mis:viewMIS, hr:viewHR, payroll:viewPayroll,
+    accounting:viewAccounting, ai:viewAI, admin:viewAdmin
+  }[CURRENT])();
+}
+
+/* ---------- Scope: which agents can current user see ---------- */
+function descendantsOf(name){
+  let res=[]; DB.employees.filter(e=>e.reportsTo===name).forEach(e=>{ res.push(e); res=res.concat(descendantsOf(e.name)); });
+  return res;
+}
+function visibleAgents(){
+  const r=SESSION.role, me=SESSION.name;
+  if(r==="agent") return [me];
+  if(r==="team_leader"||r==="teams_head") return descendantsOf(me).filter(e=>e.role==="agent").map(e=>e.name);
+  // sales_head, admin, backoffice, accountant, hr see all agents
+  return DB.employees.filter(e=>e.role==="agent").map(e=>e.name);
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function viewDash(){
+  const ags=visibleAgents();
+  const dsr=DB.dsr.filter(d=>ags.includes(d.agent));
+  const pipe=DB.pipeline.filter(p=>ags.includes(p.agent));
+  const ord=DB.orders.filter(o=>ags.includes(o.agent));
+  const calls=dsr.length, connected=dsr.filter(d=>d.connected==="YES").length;
+  const connRate=calls?Math.round(connected/calls*100):0;
+  const pipeVal=pipe.reduce((s,p)=>s+p.mrc,0);
+  const subMRC=ord.reduce((s,o)=>s+o.mrc,0);
+  const actMRC=ord.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.mrc,0);
+  const target=DB.employees.filter(e=>ags.includes(e.name)).reduce((s,e)=>s+e.target,0);
+  const ach=target?Math.round(actMRC/target*100):0;
+
+  let k=`<div class="kpis">
+    ${kpi("Calls Logged",calls,"var(--blue)","Connected "+connRate+"%")}
+    ${kpi("Pipeline Value (MRC)",AED(pipeVal),"var(--purple)",pipe.length+" open deals")}
+    ${kpi("Submitted MRC",AED(subMRC),"var(--amber)",ord.length+" orders")}
+    ${kpi("Activated MRC",AED(actMRC),"var(--green)","Target "+ach+"%")}
+  </div>`;
+
+  // stage funnel
+  const byStage=PIPE_STAGES.map(s=>({s,n:pipe.filter(p=>p.stage===s).length,v:pipe.filter(p=>p.stage===s).reduce((a,p)=>a+p.mrc,0)}));
+  const maxN=Math.max(1,...byStage.map(x=>x.n));
+  let funnel=byStage.map(x=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${x.s}</span><span class="muted">${x.n} · ${AED(x.v)}</span></div><div class="bar"><i style="width:${x.n/maxN*100}%;background:${statusColor(x.s)}"></i></div></div>`).join("");
+
+  // agent leaderboard
+  const board=ags.map(a=>{
+    const t=DB.employees.find(e=>e.name===a)?.target||0;
+    const av=DB.orders.filter(o=>o.agent===a&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.mrc,0);
+    return {a,t,av,pct:t?Math.round(av/t*100):0};
+  }).sort((x,y)=>y.av-x.av);
+  let lb=`<table><tr><th>Agent</th><th>Target</th><th>Activated</th><th>Ach %</th></tr>`+
+    board.map(b=>`<tr><td>${b.a}</td><td>${AED(b.t)}</td><td>${AED(b.av)}</td><td>${tag(b.pct+"%")}</td></tr>`).join("")+`</table>`;
+
+  return k+`<div class="grid2">
+    <div class="card"><h3>Pipeline by Stage</h3>${funnel}</div>
+    <div class="card"><h3>Agent Performance (Activated MRC)</h3>${lb}</div>
+  </div>
+  <div class="card"><h3>Quick AI Insight <span class="badge">AI</span></h3>${miniInsight(ags)}</div>`;
+}
+function kpi(label,val,color,sub){
+  return `<div class="kpi"><div class="label">${label}</div><div class="val" style="color:${color}">${val}</div><div class="sub muted">${sub}</div></div>`;
+}
+function miniInsight(ags){
+  const ord=DB.orders.filter(o=>ags.includes(o.agent));
+  const onHold=ord.filter(o=>o.status==="On Hold").length;
+  const cancelled=ord.filter(o=>o.status==="Cancelled").length;
+  const inproc=ord.filter(o=>o.status==="E& In-process"||o.status==="Submitted").length;
+  let f="";
+  f+=`<div class="flag good">✓ ${ord.filter(o=>o.status==="Activated"||o.status==="Closed").length} orders activated/closed this period.</div>`;
+  if(inproc) f+=`<div class="flag warn">⚠ ${inproc} orders waiting on e& / back office — chase to protect activation rate.</div>`;
+  if(onHold) f+=`<div class="flag warn">⚠ ${onHold} orders On Hold (usually missing documents). Assign to back office today.</div>`;
+  if(cancelled) f+=`<div class="flag bad">✗ ${cancelled} cancelled/returned — review reasons in MIS to cut churn.</div>`;
+  return f;
+}
+
+/* ============================================================
+   DSR — AGENT  (single tab: build list + call + update status)
+   ============================================================ */
+function viewDSR(){
+  const ags=visibleAgents();
+  const isAgent=SESSION.role==="agent";
+  const rows=DB.dsr.filter(d=>ags.includes(d.agent)).sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  const today=new Date().toISOString().slice(0,10);
+  // quick stats
+  const total=rows.length, conn=rows.filter(d=>d.connected==="YES").length;
+  const interested=rows.filter(d=>d.status==="Interested").length;
+  const followup=rows.filter(d=>d.status==="FollowUp").length;
+  let body=rows.slice(0,500).map(d=>`<tr>
+    <td><b style="color:var(--brand2)">${d.dsrNo||"-"}</b></td><td>${d.date}</td>${isAgent?'':`<td>${d.agent}</td>`}<td>${d.company}</td><td class="muted">${d.contactNo||"-"}</td>
+    <td>${d.customer||"-"}</td><td>${tag(d.status)}</td>
+    <td>${d.connected==="YES"?'<span style="color:var(--green)">●</span>':'<span class="muted">○</span>'}</td>
+    <td class="muted">${d.remarks||""}</td>
+    <td style="white-space:nowrap">${(()=>{const p=priorContact(d);return p?`<span class="dupwarn" title="Already called by ${p.by} on ${p.date} (${p.no})" onclick="dupInfo('${d.id}')">⚠ Dup</span>`:'';})()}
+      <button class="btn-ghost" onclick="updateDSR('${d.id}')">Update</button>
+      <button class="btn-ghost kebab" onclick="rowMenu('${d.id}',event)">⋯</button></td></tr>`).join("");
+  const canAdd=isAgent||can("import_leads");
+  return `<div class="kpis">
+      ${kpi("Calls Logged",total,"var(--blue)",conn+" connected")}
+      ${kpi("Interested",interested,"var(--green)","Push to pipeline")}
+      ${kpi("Follow-ups",followup,"var(--amber)","To call back")}
+      ${kpi("Connect Rate",total?Math.round(conn/total*100)+"%":"0%","var(--purple)","Quality signal")}
+    </div>
+    <div class="toolbar">
+      ${canAdd?'<button class="btn-primary" onclick="addDSRModal()">+ Log Call</button>':''}
+      ${canAdd?'<button class="btn-ghost" onclick="importDSRModal()">⤓ Import list (Google Sheet / CSV)</button>':''}
+      <span class="muted">Daily Sales Report — search any column below · agents build their list, call, and update status here</span>
+    </div>
+    ${(()=>{const cols=isAgent?["DSR No","Date","Company","Contact","Customer","Status","Conn.","Remarks",null]:["DSR No","Date","Agent","Company","Contact","Customer","Status","Conn.","Remarks",null];
+      return `<div class="scroll"><table id="dTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}`;
+}
+function addDSRModal(){
+  openModal("Log Call — DSR Entry",`
+    <div class="row"><div><label>Company</label><input id="m_co"></div><div><label>Contact No.</label><input id="m_cn0"></div></div>
+    <label>Customer / Contact Person</label><input id="m_cu">
+    <div class="row"><div><label>Call Status</label><select id="m_st">${CALL_STATUS.map(s=>`<option>${s}</option>`).join("")}</select></div>
+    <div><label>Connected?</label><select id="m_cn"><option>YES</option><option>NO</option></select></div></div>
+    <label>Remarks</label><textarea id="m_re" rows="3"></textarea>
+  `,()=>{
+    const st=$("m_st").value;
+    const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:SESSION.role==="agent"?SESSION.name:"Hira",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
+    addLog(entry,"DSR created · status set to "+st);
+    DB.dsr.unshift(entry); save();
+    const dup=priorContact(entry);
+    if(dup){ addLog(entry,`⚠ Duplicate — earlier contact ${dup.no} by ${dup.by} on ${dup.date} (matched ${dup.matchType})`); save(); }
+    render();
+    if(dup){ alert(`⚠ Duplicate contact!\n\nThis ${dup.matchType==='number'?'number':'company'} was already called by ${dup.by} on ${dup.date} (${dup.no}).\n\nCoordinate before re-contacting.`); }
+    if(st==="Interested" && confirm("Marked Interested — convert this lead to a pipeline opportunity now?")){ convertToPipeline(entry.id); }
+  });
+}
+function updateDSR(id){
+  const d=DB.dsr.find(x=>x.id===id);
+  openModal(`Update — ${d.company}`,`
+    <div class="row"><div><label>Customer / Contact</label><input id="u_cu" value="${d.customer||''}"></div><div><label>Contact No.</label><input id="u_cn0" value="${d.contactNo||''}"></div></div>
+    <div class="row"><div><label>Call Status</label><select id="u_st">${CALL_STATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join("")}</select></div>
+    <div><label>Connected?</label><select id="u_cn"><option ${d.connected==='YES'?'selected':''}>YES</option><option ${d.connected==='NO'?'selected':''}>NO</option></select></div></div>
+    <label>Remarks</label><textarea id="u_re" rows="3">${d.remarks||''}</textarea>
+  `,()=>{
+    const nv={customer:$("u_cu").value,contactNo:$("u_cn0").value,status:$("u_st").value,connected:$("u_cn").value,remarks:$("u_re").value};
+    if(nv.status!==d.status) addLog(d,`Status: ${d.status} → ${nv.status}`);
+    if(nv.connected!==d.connected) addLog(d,`Connected: ${d.connected} → ${nv.connected}`);
+    if(nv.customer!==(d.customer||"")) addLog(d,`Customer: "${d.customer||''}" → "${nv.customer}"`);
+    if(nv.contactNo!==(d.contactNo||"")) addLog(d,`Contact No updated`);
+    if(nv.remarks!==(d.remarks||"")) addLog(d,`Remarks updated`);
+    Object.assign(d,nv);
+    save(); render();
+    if(d.status==="Interested" && !d.converted && confirm("Marked Interested — convert this lead to a pipeline opportunity now?")){ convertToPipeline(d.id); }
+  });
+}
+// ---- Duplicate contact detection ----
+const _phone=s=>String(s||"").replace(/\D/g,"");
+const _norm=s=>String(s||"").toLowerCase().replace(/\s+/g,' ').trim();
+function priorContact(rec){
+  const matches=DB.dsr.filter(d=>d.id!==rec.id && (
+    (_phone(rec.contactNo)&&_phone(d.contactNo)===_phone(rec.contactNo)) ||
+    (_norm(rec.company)&&_norm(d.company)===_norm(rec.company))
+  ));
+  const earlier=matches.filter(d=> d.date<rec.date || (d.date===rec.date && dsrSeqNum(d.dsrNo)<dsrSeqNum(rec.dsrNo)));
+  if(!earlier.length) return null;
+  earlier.sort((a,b)=> a.date<b.date?1:-1);
+  const p=earlier[0];
+  return {by:p.agent,date:p.date,no:p.dsrNo,company:p.company,count:earlier.length,
+          matchType:(_phone(rec.contactNo)&&_phone(p.contactNo)===_phone(rec.contactNo))?"number":"company"};
+}
+function dupInfo(id){
+  const d=DB.dsr.find(x=>x.id===id); const p=priorContact(d);
+  if(!p){ openModalInfo("No earlier contact","<p class='muted'>No earlier record found for this contact.</p>"); return; }
+  openModalInfo(`⚠ Possible duplicate — ${d.company}`,
+   `<div class="flag bad" style="margin-top:0">This contact was already called earlier by another agent.</div>
+    <table>
+     <tr><td class="muted">Matched on</td><td><b>${p.matchType==='number'?'Contact number':'Company name'}</b></td></tr>
+     <tr><td class="muted">Earlier DSR No</td><td><b style="color:var(--brand2)">${p.no}</b></td></tr>
+     <tr><td class="muted">Called by</td><td><b>${p.by}</b></td></tr>
+     <tr><td class="muted">Date</td><td>${p.date}</td></tr>
+     <tr><td class="muted">Earlier records</td><td>${p.count}</td></tr>
+    </table>
+    <p class="muted" style="font-size:12px">Check with <b>${p.by}</b> before re-contacting, to avoid double-calling the same customer.</p>`);
+}
+// ---- Row action dropdown ----
+function rowMenu(id,ev){
+  ev.stopPropagation();
+  const d=DB.dsr.find(x=>x.id===id); if(!d)return;
+  const items=[];
+  items.push(d.converted
+    ? `<div class="mi disabled">✓ Already in Pipeline</div>`
+    : `<button class="mi" onclick="closeMenu();convertToPipeline('${id}')">→ Convert to Pipeline</button>`);
+  items.push(`<button class="mi" onclick="closeMenu();openHistory('${id}')">History (${(d.history||[]).length})</button>`);
+  if(priorContact(d)) items.push(`<button class="mi" onclick="closeMenu();dupInfo('${id}')">⚠ View earlier contact</button>`);
+  const x=Math.min(ev.clientX, window.innerWidth-210), y=Math.min(ev.clientY, window.innerHeight-160);
+  $("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div><div class="menucard" style="left:${x}px;top:${y}px">${items.join("")}</div>`;
+}
+function closeMenu(){ $("menuHost").innerHTML=""; }
+function openHistory(id){
+  const d=DB.dsr.find(x=>x.id===id); if(!d)return;
+  const h=(d.history||[]).slice().reverse();
+  const stageColor={DSR:"var(--blue)",Pipeline:"var(--purple)","Back Office":"var(--green)"};
+  const rows=h.length?h.map(x=>{const c=stageColor[x.stage]||"var(--blue)";return `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="min-width:130px" class="muted">${x.ts}</div>
+      <div style="flex:1"><span class="tag" style="background:${c}22;color:${c}">${x.stage||'DSR'}</span> ${x.text}<div><small class="muted">by ${x.user}</small></div></div>
+    </div>`}).join(""):'<p class="muted">No history yet.</p>';
+  openModalInfo(`History — ${d.dsrNo} · ${d.company}`,
+    `<p class="muted" style="margin-top:0;font-size:12px">Immutable audit trail — who changed what, when. Newest first. The DSR number stays fixed for the life of the record.</p>${rows}`);
+}
+function openHistoryByNo(no){
+  const d=DB.dsr.find(x=>x.dsrNo===no);
+  if(d) openHistory(d.id);
+  else openModalInfo(`History — ${no}`,'<p class="muted">This is a seeded/legacy record with no linked DSR call. Records created via the DSR — Agent tab carry a full audit trail end-to-end.</p>');
+}
+function importDSRModal(){
+  openModal("Import Calling List",`
+    <p class="muted" style="margin-top:0;font-size:12px">Paste rows from your rough Google Sheet / Excel. One per line:<br><b>Company, Contact No, Customer, Status, Remarks</b></p>
+    <textarea id="imp" rows="7" placeholder="ABC Trading LLC, 97150xxxxxxx, Mr Ali, FollowUp, Call back Sunday
+XYZ Contracting, 97152xxxxxxx, Neha, Not interested, Using Du"></textarea>
+    <div class="flag warn" style="margin-top:10px">In the live system this is a one-click <b>Google Sheets connector</b> — no copy-paste. Demo accepts pasted rows.</div>
+  `,()=>{
+    const lines=$("imp").value.split("\n").map(l=>l.trim()).filter(Boolean); let n=0;
+    lines.forEach(line=>{
+      const p=line.split(",").map(s=>s.trim()); if(!p[0])return;
+      const st=CALL_STATUS.includes(p[3])?p[3]:"FollowUp";
+      const e={id:"D"+Date.now()+(n++),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:SESSION.role==="agent"?SESSION.name:"Hira",company:p[0],contactNo:p[1]||"",customer:p[2]||"",status:st,remarks:p[4]||"",connected:(st==="No answer"||st==="Voicemail")?"NO":"YES"};
+      addLog(e,"Imported from sheet · status "+st); DB.dsr.unshift(e);
+    });
+    save(); alert(n+" contacts imported into your DSR."); render();
+  });
+}
+
+/* ============================================================
+   PIPELINE (kanban)
+   ============================================================ */
+function viewPipeline(){
+  const ags=visibleAgents();
+  const pipe=[...DB.pipeline.filter(p=>ags.includes(p.agent))].sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  const pct=s=>{const m=String(s).match(/(\d+)%/);return m?+m[1]:0;};
+  const open=pipe.filter(p=>!p.stage.includes("100%")&&!p.stage.includes("Lost"));
+  const openMRC=open.reduce((a,p)=>a+p.mrc,0);
+  const weighted=pipe.reduce((a,p)=>a+p.mrc*pct(p.stage)/100,0);
+  const wonItems=pipe.filter(p=>p.stage.includes("100%"));
+  const won=wonItems.reduce((a,p)=>a+p.mrc,0);
+  const cols=["DSR No","Date","Company","Customer","Product","Qty","MRC/mo","Annual","Stage","Agent","TL",null];
+  let body=pipe.map(p=>`<tr>
+    <td><b style="color:var(--brand2)">${p.dsrNo||"-"}</b></td><td>${p.date}</td><td>${p.company}</td><td>${p.customer||"-"}</td>
+    <td>${p.product}<br><small class="muted">${p.cat}</small></td><td>${p.qty}</td><td>${AED(p.mrc)}</td><td class="muted">${AED(p.annual)}</td>
+    <td>${tag(p.stage)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
+    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
+  return `<div class="kpis">
+      ${kpi("Open Deals",open.length,"var(--blue)",AED(openMRC)+" MRC")}
+      ${kpi("Weighted Pipeline",AED(weighted),"var(--purple)","Stage-adjusted forecast")}
+      ${kpi("Won (100%)",AED(won),"var(--green)",wonItems.length+" deals")}
+      ${kpi("Total Deals",pipe.length,"var(--amber)","All stages")}
+    </div>
+    <div class="toolbar">
+      ${SESSION.role==="agent"?'<button class="btn-primary" onclick="addDealModal()">+ New Opportunity</button>':''}
+      <span class="muted">Search any column below · click Update to change stage, mark won, or escalate</span>
+    </div>
+    <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;
+}
+function rowMenuPipe(id,ev){
+  ev.stopPropagation();
+  const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
+  const items=[`<button class="mi" onclick="closeMenu();openHistoryByNo('${p.dsrNo}')">History</button>`];
+  if(!p.stage.includes("100%")&&!p.stage.includes("Lost")) items.push(`<button class="mi" onclick="closeMenu();escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
+  const x=Math.min(ev.clientX,window.innerWidth-210), y=Math.min(ev.clientY,window.innerHeight-160);
+  $("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div><div class="menucard" style="left:${x}px;top:${y}px">${items.join("")}</div>`;
+}
+function openDeal(id){
+  const p=DB.pipeline.find(x=>x.id===id);
+  openModal(`Opportunity — ${p.company}`,`
+    <div class="flag warn" style="margin-top:0">Ref <b>${p.dsrNo||'-'}</b> · same number flows to Back Office when won (never changes)</div>
+    <div class="row"><div><label>Customer</label><input id="d_cu" value="${p.customer||''}"></div><div><label>Agent</label><input value="${p.agent}" disabled></div></div>
+    <div class="row"><div><label>Product</label><input id="d_pr" value="${p.product}"></div><div><label>Category</label><input value="${p.cat}" disabled></div></div>
+    <div class="row"><div><label>Qty</label><input id="d_qt" type="number" value="${p.qty}"></div><div><label>Unit MRC</label><input id="d_pc" type="number" value="${p.price}"></div></div>
+    <label>Stage</label><select id="d_st">${PIPE_STAGES.map(s=>`<option ${s===p.stage?'selected':''}>${s}</option>`).join("")}</select>
+    <label>Remarks</label><textarea id="d_re" rows="2">${p.remarks||''}</textarea>
+    <div class="flag warn" style="margin-top:12px">Annual revenue if won: <b>${AED(p.annual)}</b></div>
+  `,()=>{
+    const oldStage=p.stage;
+    p.customer=$("d_cu").value;p.product=$("d_pr").value;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
+    p.mrc=p.qty*p.price;p.annual=p.mrc*12;p.stage=$("d_st").value;p.remarks=$("d_re").value;
+    if(p.stage!==oldStage) logByDsrNo(p.dsrNo,`Pipeline stage: ${oldStage} → ${p.stage}`,"Pipeline");
+    if(p.stage.includes("100%") && confirm("Deal won! Push to Back Office for order processing?")){
+      DB.orders.unshift({id:"O"+Date.now(),dsrNo:p.dsrNo,subDate:new Date().toISOString().slice(0,10),contact:p.customer,contactNo:p.contactNo||"",customer:p.company,pid:"",ord:"",sr:"NEW",cat:p.cat,product:p.product,contract:"12 Months",qty:p.qty,mrc:p.mrc,agent:p.agent,tl:p.tl,eAcctMgr:"Ankit",status:"Submitted",actDate:"",commission:Math.round(p.mrc*0.15),remarks:"From pipeline"});
+      logByDsrNo(p.dsrNo,`Deal WON → sent to Back Office as new order`,"Back Office");
+    }
+    save(); render();
+  },`<button class="btn-ghost" onclick="openHistoryByNo('${p.dsrNo}')">History</button><button class="btn-ghost" onclick="escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
+}
+function escalateDeal(id){ const p=DB.pipeline.find(x=>x.id===id); p.escalated=true; logByDsrNo(p.dsrNo,"Escalated to Sales Head (Amir Qadri)","Pipeline"); alert("Escalated to Sales Head (Amir Qadri) for support."); save(); closeModal(); render(); }
+function convertToPipeline(id){
+  const d=DB.dsr.find(x=>x.id===id);
+  addDealModal({company:d.company,customer:d.customer,contactNo:d.contactNo,remarks:d.remarks,dsrNo:d.dsrNo},id);
+}
+function addDealModal(prefill={},dsrId=null){
+  const title=dsrId?"Convert DSR Lead → Pipeline":"New Opportunity";
+  openModal(title,`
+    ${dsrId?'<div class="flag good" style="margin-top:0">Converting <b>'+(prefill.dsrNo||'')+'</b> — '+(prefill.company||'')+' — into a sales opportunity. The DSR number stays the same end-to-end.</div>':''}
+    <div class="row"><div><label>Company</label><input id="n_co" value="${prefill.company||''}"></div><div><label>Contact No.</label><input id="n_cn0" value="${prefill.contactNo||''}"></div></div>
+    <label>Customer / Contact</label><input id="n_cu" value="${prefill.customer||''}">
+    <label>Product</label><select id="n_pr">${PRODUCTS.map(p=>`<option data-cat="${p.cat}">${p.title}</option>`).join("")}</select>
+    <div class="row"><div><label>Qty</label><input id="n_qt" type="number" value="1"></div><div><label>Unit MRC (AED)</label><input id="n_pc" type="number" value="200"></div></div>
+    <label>Stage</label><select id="n_st">${PIPE_STAGES.map(s=>`<option ${s.includes('10%')?'selected':''}>${s}</option>`).join("")}</select>
+    <label>Remarks</label><textarea id="n_re" rows="2">${prefill.remarks||''}</textarea>
+  `,()=>{
+    const sel=$("n_pr").selectedOptions[0]; const qty=+$("n_qt").value,price=+$("n_pc").value;
+    const me=DB.employees.find(e=>e.name===SESSION.name)||{};
+    const agent=me.role==="agent"?SESSION.name:(prefill.agent||"Hira");
+    const myTL=(DB.employees.find(e=>e.name===agent)||{}).tl||"-";
+    const recNo=prefill.dsrNo||nextDsrNo();
+    DB.pipeline.unshift({id:"P"+Date.now(),dsrNo:recNo,date:new Date().toISOString().slice(0,10),cp:"DIGI COO",customer:$("n_cu").value,contactNo:$("n_cn0").value,company:$("n_co").value,cat:sel.dataset.cat,product:sel.value,price,qty,mrc:qty*price,annual:qty*price*12,stage:$("n_st").value,agent,tl:myTL,escalated:false,remarks:$("n_re").value,fromDSR:!!dsrId});
+    if(dsrId){ const d=DB.dsr.find(x=>x.id===dsrId); if(d){ d.converted=true; d.status="Interested"; addLog(d,`Converted to Pipeline · ${sel.value} ${qty}× = ${AED(qty*price)}/mo · stage ${$("n_st").value}`,"Pipeline"); } }
+    save(); CURRENT="pipeline"; renderNav(); render();
+  });
+}
+
+/* ============================================================
+   BACK OFFICE / ORDERS
+   ============================================================ */
+function viewBackoffice(){
+  const rows=[...DB.orders].sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  let body=rows.map(o=>`<tr>
+    <td><b style="color:var(--brand2)">${o.dsrNo||"-"}</b></td><td>${o.subDate}</td><td>${o.customer}</td><td>${o.product}</td><td>${o.qty}</td>
+    <td>${AED(o.mrc)}</td><td>${o.agent}</td><td>${o.pid||'<span class="muted">—</span>'}</td>
+    <td>${tag(o.status)}</td><td>${o.actDate||'<span class="muted">—</span>'}</td>
+    <td><button class="btn-ghost" onclick="openOrder('${o.id}')">Process</button></td></tr>`).join("");
+  const counts=ORDER_STATUS.map(s=>`${s}: ${rows.filter(o=>o.status===s).length}`).join(" · ");
+  const cols=["DSR No","Sub Date","Customer","Product","Qty","MRC","Agent","PID","Status","Activated",null];
+  return `<div class="toolbar"><span class="muted">${rows.length} orders · search any column below</span></div>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">${counts}</p>
+    <div class="scroll"><table id="oTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;
+}
+function openOrder(id){
+  const o=DB.orders.find(x=>x.id===id);
+  openModal(`Order — ${o.customer}`,`
+    <div class="flag warn" style="margin-top:0">DSR Ref <b>${o.dsrNo||'-'}</b> · traced from the original agent call</div>
+    <div class="row"><div><label>PID</label><input id="o_pid" value="${o.pid||''}"></div><div><label>Order No</label><input id="o_ord" value="${o.ord||''}"></div></div>
+    <div class="row"><div><label>SR Type</label><select id="o_sr"><option ${o.sr==='NEW'?'selected':''}>NEW</option><option ${o.sr==='MNP'?'selected':''}>MNP</option></select></div><div><label>Contract</label><input id="o_con" value="${o.contract}"></div></div>
+    <label>Status</label><select id="o_st">${ORDER_STATUS.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join("")}</select>
+    <label>Activation Date</label><input id="o_act" type="date" value="${o.actDate||''}">
+    <label>Remarks / Reason</label><textarea id="o_re" rows="2">${o.remarks||''}</textarea>
+    <div class="flag warn" style="margin-top:12px">Processed with e& · Account Manager: <b>${o.eAcctMgr||'Ankit'}</b> · e& Director: <b>Khalifa</b> <span class="muted">(external — reference only)</span></div>
+    <div class="flag good">Commission (15% of MRC): <b>${AED(o.commission)}</b></div>
+  `,()=>{
+    const oldSt=o.status, oldPid=o.pid, oldAct=o.actDate;
+    o.pid=$("o_pid").value;o.ord=$("o_ord").value;o.sr=$("o_sr").value;o.contract=$("o_con").value;
+    o.status=$("o_st").value;o.actDate=$("o_act").value;o.remarks=$("o_re").value;
+    if(o.status!==oldSt) logByDsrNo(o.dsrNo,`Order status: ${oldSt} → ${o.status}`,"Back Office");
+    if(o.pid!==oldPid && o.pid) logByDsrNo(o.dsrNo,`PID assigned: ${o.pid}`,"Back Office");
+    if(o.actDate!==oldAct && o.actDate) logByDsrNo(o.dsrNo,`Activated on ${o.actDate}`,"Back Office");
+    save(); render();
+  },`<button class="btn-ghost" onclick="openHistoryByNo('${o.dsrNo}')">History</button>`);
+}
+
+/* ============================================================
+   MIS & TARGETS
+   ============================================================ */
+function viewMIS(){
+  const ags=DB.employees.filter(e=>e.role==="agent").map(e=>e.name);
+  const rows=ags.map(a=>{
+    const emp=DB.employees.find(e=>e.name===a);
+    const ord=DB.orders.filter(o=>o.agent===a);
+    const sub=ord.reduce((s,o)=>s+o.mrc,0);
+    const act=ord.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.mrc,0);
+    const comm=ord.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.commission,0);
+    const hold=ord.filter(o=>o.status==="On Hold"||o.status==="E& In-process"||o.status==="Submitted").reduce((s,o)=>s+o.mrc,0);
+    return {a,tl:emp.tl,tgt:emp.target,sub,act,comm,hold,subP:emp.target?Math.round(sub/emp.target*100):0,actP:emp.target?Math.round(act/emp.target*100):0};
+  });
+  const tot=k=>rows.reduce((s,r)=>s+r[k],0);
+  let body=rows.map(r=>`<tr>
+    <td>${r.a}</td><td class="muted">${r.tl}</td><td>${AED(r.tgt)}</td>
+    <td>${AED(r.sub)}</td><td>${AED(r.act)}</td><td>${tag(r.actP+"%")}</td>
+    <td style="color:var(--amber)">${AED(r.hold)}</td><td style="color:var(--green)">${AED(r.comm)}</td></tr>`).join("");
+  body+=`<tr class="fkeep" style="font-weight:800"><td>TOTAL</td><td></td><td>${AED(tot("tgt"))}</td><td>${AED(tot("sub"))}</td><td>${AED(tot("act"))}</td><td>${tot("tgt")?Math.round(tot("act")/tot("tgt")*100):0}%</td><td>${AED(tot("hold"))}</td><td>${AED(tot("comm"))}</td></tr>`;
+
+  // status breakdown
+  const sb=ORDER_STATUS.map(s=>{const v=DB.orders.filter(o=>o.status===s).reduce((a,o)=>a+o.mrc,0);const n=DB.orders.filter(o=>o.status===s).length;return `<tr><td>${tag(s)}</td><td>${n}</td><td>${AED(v)}</td></tr>`}).join("");
+
+  const misCols=["Agent","TL","Target","Submitted","Activated","Ach%","Pending MRC","Commission"];
+  return `<div class="card"><h3>Sales MIS — Target vs Submission vs Activation</h3>
+    <div class="scroll" style="max-height:46vh"><table><tr>${misCols.map(c=>`<th>${c}</th>`).join("")}</tr>${colFilterRow(misCols)}${body}</table></div></div>
+    <div class="grid2">
+      <div class="card"><h3>Order Status Breakdown</h3><table><tr><th>Status</th><th>Count</th><th>MRC</th></tr>${sb}</table></div>
+      <div class="card"><h3>Team Leader Roll-up</h3>${tlRollup()}</div>
+    </div>`;
+}
+function tlRollup(){
+  const tls=[...new Set(DB.employees.filter(e=>e.role==="agent").map(e=>e.tl))];
+  return `<table><tr><th>Team Leader</th><th>Agents</th><th>Activated MRC</th><th>Commission</th></tr>`+
+    tls.map(tl=>{
+      const team=DB.employees.filter(e=>e.tl===tl).map(e=>e.name);
+      const ord=DB.orders.filter(o=>team.includes(o.agent)&&(o.status==="Activated"||o.status==="Closed"));
+      return `<tr><td>${tl}</td><td>${team.length}</td><td>${AED(ord.reduce((s,o)=>s+o.mrc,0))}</td><td style="color:var(--green)">${AED(ord.reduce((s,o)=>s+o.commission,0))}</td></tr>`;
+    }).join("")+`</table>`;
+}
+
+/* ============================================================
+   HR
+   ============================================================ */
+function viewHR(){
+  let body=DB.employees.map(e=>`<tr>
+    <td>${e.id}</td><td>${e.name}</td><td>${e.desig}</td><td><span class="tag" style="background:#3b82f622;color:var(--blue)">${ROLES[e.role].name}</span></td>
+    <td>${e.dept}</td><td>${e.tl}</td><td>${e.join}</td><td>${e.salary?AED(e.salary):'-'}</td>
+    <td><button class="btn-ghost" onclick="openEmp('${e.id}')">Edit</button></td></tr>`).join("");
+  const heads=DB.employees.length, sales=DB.employees.filter(e=>e.dept==="e& Sales").length;
+  const cost=DB.employees.reduce((s,e)=>s+e.salary,0);
+  return `<div class="kpis">
+      ${kpi("Head Count",heads,"var(--blue)",sales+" in e& Sales")}
+      ${kpi("Monthly Salary Cost",AED(cost),"var(--amber)","Excl. commission")}
+      ${kpi("Departments",[...new Set(DB.employees.map(e=>e.dept))].length,"var(--purple)","")}
+      ${kpi("Avg Tenure","~7 mo","var(--green)","Demo")}
+    </div>
+    <div class="toolbar">${can("manage_users")?'<button class="btn-primary" onclick="addEmpModal()">+ Add Employee / User</button>':'<span class="muted">View only — ask Admin to grant \'Create user accounts\'</span>'}<span class="muted">Employee master · designations & reporting lines</span></div>
+    ${(()=>{const cols=["ID","Name","Designation","System Role","Dept","Reports To","Join Date","Salary",null];
+      return `<div class="scroll"><table id="hTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}`;
+}
+function openEmp(id){
+  const e=DB.employees.find(x=>x.id===id);
+  openModal(`Employee — ${e.name}`,`
+    <div class="row"><div><label>Name</label><input id="e_nm" value="${e.name}"></div><div><label>Designation</label><input id="e_dg" value="${e.desig}"></div></div>
+    <label>System Role (controls access)</label><select id="e_rl">${Object.keys(ROLES).map(r=>`<option value="${r}" ${r===e.role?'selected':''}>${ROLES[r].name}</option>`).join("")}</select>
+    <div class="row"><div><label>Department</label><input id="e_dp" value="${e.dept}"></div><div><label>Reports To</label><input id="e_tl" value="${e.tl}"></div></div>
+    <div class="row"><div><label>Monthly Salary (AED)</label><input id="e_sal" type="number" value="${e.salary}"></div><div><label>Monthly Target (MRC)</label><input id="e_tg" type="number" value="${e.target}"></div></div>
+  `,()=>{
+    e.name=$("e_nm").value;e.desig=$("e_dg").value;e.role=$("e_rl").value;e.dept=$("e_dp").value;e.tl=$("e_tl").value;e.salary=+$("e_sal").value;e.target=+$("e_tg").value;
+    save(); render();
+  });
+}
+function addEmpModal(){
+  openModal("Add Employee",`
+    <div class="row"><div><label>Name</label><input id="a_nm"></div><div><label>Designation</label><input id="a_dg"></div></div>
+    <label>System Role</label><select id="a_rl">${Object.keys(ROLES).map(r=>`<option value="${r}">${ROLES[r].name}</option>`).join("")}</select>
+    <div class="row"><div><label>Department</label><input id="a_dp" value="e& Sales"></div><div><label>Reports To</label><input id="a_tl" value="Joy"></div></div>
+    <div class="row"><div><label>Salary (AED)</label><input id="a_sal" type="number" value="4000"></div><div><label>Target (MRC)</label><input id="a_tg" type="number" value="5000"></div></div>
+  `,()=>{
+    DB.employees.push({id:"E"+(DB.employees.length+1).toString().padStart(2,'0'),name:$("a_nm").value,role:$("a_rl").value,desig:$("a_dg").value,tl:$("a_tl").value,mgr:"Maria",target:+$("a_tg").value,salary:+$("a_sal").value,join:new Date().toISOString().slice(0,10),dept:$("a_dp").value});
+    save(); render();
+  });
+}
+
+/* ============================================================
+   PAYROLL (WPS + commission + gratuity)
+   ============================================================ */
+function viewPayroll(){
+  const rows=DB.employees.filter(e=>e.salary>0).map(e=>{
+    const comm=DB.orders.filter(o=>o.agent===e.name&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.commission,0);
+    const basic=Math.round(e.salary*0.6), allow=e.salary-basic;
+    const gross=e.salary+comm;
+    // simple gratuity accrual: 21 days basic per year of service, monthly accrual
+    const grat=Math.round(basic/30*21/12);
+    return {...e,basic,allow,comm,gross,grat};
+  });
+  const tot=k=>rows.reduce((s,r)=>s+r[k],0);
+  let body=rows.map(r=>`<tr>
+    <td>${r.name}</td><td>${r.desig}</td><td>${AED(r.basic)}</td><td>${AED(r.allow)}</td>
+    <td style="color:var(--green)">${AED(r.comm)}</td><td><b>${AED(r.gross)}</b></td><td class="muted">${AED(r.grat)}</td></tr>`).join("");
+  body+=`<tr style="font-weight:800"><td>TOTAL</td><td></td><td>${AED(tot("basic"))}</td><td>${AED(tot("allow"))}</td><td>${AED(tot("comm"))}</td><td>${AED(tot("gross"))}</td><td>${AED(tot("grat"))}</td></tr>`;
+  return `<div class="kpis">
+      ${kpi("Gross Payroll (this month)",AED(tot("gross")),"var(--brand2)",rows.length+" employees")}
+      ${kpi("Commission Payout",AED(tot("comm")),"var(--green)","On activated MRC")}
+      ${kpi("Gratuity Accrued (mo)",AED(tot("grat")),"var(--amber)","UAE EOSB 21 days/yr")}
+      ${kpi("WPS Status","Ready","var(--blue)","SIF file exportable")}
+    </div>
+    <div class="card"><h3>Payroll Run — June 2026 <span class="badge">WPS</span></h3>
+    <div class="scroll"><table><tr><th>Employee</th><th>Designation</th><th>Basic (60%)</th><th>Allowances</th><th>Commission</th><th>Gross Pay</th><th>Gratuity/mo</th></tr>${body}</table></div>
+    <p class="muted" style="font-size:12px;margin-top:10px">Demo logic: Basic = 60% of salary; commission = 15% of activated MRC; gratuity = 21 days basic per year (UAE EOSB), accrued monthly. Real system exports the WPS SIF file for bank upload.</p>
+    ${can("run_payroll")?'<button class="btn-primary" onclick="alert(\'Demo: WPS SIF file generated and queued for bank upload.\')">Generate WPS File</button>':''}</div>`;
+}
+
+/* ============================================================
+   ACCOUNTING (VAT + IFRS P&L)
+   ============================================================ */
+function viewAccounting(){
+  const inc=DB.invoices.filter(i=>i.type==="Commission Income");
+  const exp=DB.invoices.filter(i=>i.type==="Expense");
+  const revenue=inc.reduce((s,i)=>s+i.net,0);
+  const opex=exp.reduce((s,i)=>s+i.net,0);
+  const payroll=DB.employees.reduce((s,e)=>s+e.salary,0);
+  const commission=DB.orders.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.commission,0);
+  const ebitda=revenue-opex-payroll-commission;
+  const ct = ebitda>0 ? Math.round(Math.max(0,ebitda-0)*0.09) : 0; // UAE CT 9% (simplified, ignoring 375k threshold for demo)
+  const net=ebitda-ct;
+  const outputVAT=inc.reduce((s,i)=>s+i.vat,0), inputVAT=exp.reduce((s,i)=>s+i.vat,0);
+
+  let inv=DB.invoices.map(i=>`<tr><td>${i.id}</td><td>${i.date}</td><td>${i.party}</td><td>${tag(i.type==='Expense'?'Expense':'Income')}</td><td>${AED(i.net)}</td><td>${AED(i.vat)}</td><td>${AED(i.total)}</td><td>${tag(i.status)}</td></tr>`).join("");
+
+  const pl=[
+    ["Revenue — e& Commission",revenue,"green"],
+    ["Sales Commission to staff",-commission,"red"],
+    ["Salaries & Wages",-payroll,"red"],
+    ["Operating Expenses",-opex,"red"],
+    ["EBITDA / Profit before tax",ebitda,"bold"],
+    ["UAE Corporate Tax (9%)",-ct,"red"],
+    ["Net Profit after tax",net,"bold"]
+  ].map(([l,v,c])=>`<tr style="${c==='bold'?'font-weight:800':''}"><td>${l}</td><td class="right" style="color:${c==='green'?'var(--green)':c==='red'?'var(--brand2)':'inherit'}">${v<0?'('+AED(-v)+')':AED(v)}</td></tr>`).join("");
+
+  return `<div class="kpis">
+      ${kpi("Revenue (period)",AED(revenue),"var(--green)","Commission income")}
+      ${kpi("Net Profit",AED(net),net>=0?"var(--green)":"var(--brand2)","After 9% CT")}
+      ${kpi("VAT Payable",AED(outputVAT-inputVAT),"var(--amber)","Output − Input")}
+      ${kpi("Outstanding AR",AED(inc.filter(i=>i.status==='Outstanding').reduce((s,i)=>s+i.total,0)),"var(--blue)","To collect from e&")}
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Profit & Loss (IFRS view)</h3><table>${pl}</table>
+        <p class="muted" style="font-size:11px;margin-top:8px">Demo: CT applied at 9% (real system applies AED 375k 0% threshold & adjustments).</p></div>
+      <div class="card"><h3>VAT Summary (FTA) <span class="badge">5%</span></h3>
+        <table><tr><td>Output VAT (sales)</td><td class="right">${AED(outputVAT)}</td></tr>
+        <tr><td>Input VAT (purchases)</td><td class="right">${AED(inputVAT)}</td></tr>
+        <tr style="font-weight:800"><td>Net VAT Payable</td><td class="right">${AED(outputVAT-inputVAT)}</td></tr></table>
+        <p class="muted" style="font-size:11px;margin-top:8px">Maps to FTA VAT201 return. EmaraTax-ready in full build.</p></div>
+    </div>
+    <div class="card"><h3>Invoices & Bills</h3>${(()=>{const cols=["Ref","Date","Party","Type","Net","VAT","Total","Status"];
+      return `<div class="scroll" style="max-height:34vh"><table><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr>${colFilterRow(cols)}${inv}</table></div>`;})()}</div>`;
+}
+
+/* ============================================================
+   AI REPORTS (daily / weekly / monthly)
+   ============================================================ */
+let AI_PERIOD="daily";
+function viewAI(){
+  return `<div class="toolbar"><div class="seg">
+      <button class="${AI_PERIOD==='daily'?'on':''}" onclick="AI_PERIOD='daily';render()">Daily</button>
+      <button class="${AI_PERIOD==='weekly'?'on':''}" onclick="AI_PERIOD='weekly';render()">Weekly</button>
+      <button class="${AI_PERIOD==='monthly'?'on':''}" onclick="AI_PERIOD='monthly';render()">Monthly</button>
+    </div><span class="muted">Auto-generated for ${SESSION.name} (${ROLES[SESSION.role].name})</span></div>
+    ${aiReport(AI_PERIOD)}`;
+}
+function aiReport(period){
+  const ags=visibleAgents();
+  const dsr=DB.dsr.filter(d=>ags.includes(d.agent));
+  const ord=DB.orders.filter(o=>ags.includes(o.agent));
+  const pipe=DB.pipeline.filter(p=>ags.includes(p.agent));
+  const calls=dsr.length, conn=dsr.filter(d=>d.connected==="YES").length;
+  const connRate=calls?Math.round(conn/calls*100):0;
+  const act=ord.filter(o=>o.status==="Activated"||o.status==="Closed");
+  const actMRC=act.reduce((s,o)=>s+o.mrc,0);
+  const subMRC=ord.reduce((s,o)=>s+o.mrc,0);
+  const comm=act.reduce((s,o)=>s+o.commission,0);
+  const target=DB.employees.filter(e=>ags.includes(e.name)).reduce((s,e)=>s+e.target,0);
+  const achP=target?Math.round(actMRC/target*100):0;
+  const onHold=ord.filter(o=>o.status==="On Hold").length;
+  const inproc=ord.filter(o=>o.status==="E& In-process"||o.status==="Submitted").length;
+  const lost=pipe.filter(p=>p.stage.includes("Lost")).length;
+  // top + bottom agent
+  const board=ags.map(a=>({a,v:DB.orders.filter(o=>o.agent===a&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.mrc,0)})).sort((x,y)=>y.v-x.v);
+  const top=board[0], low=board[board.length-1];
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  let flags="";
+  flags+=`<div class="flag ${connRate>=50?'good':'warn'}">Connect rate ${connRate}% on ${calls} calls. ${connRate<50?'Below 50% — review calling list quality & timing.':'Healthy.'}</div>`;
+  flags+=`<div class="flag ${achP>=80?'good':achP>=50?'warn':'bad'}">Target achievement ${achP}% (${AED(actMRC)} of ${AED(target)}).</div>`;
+  if(inproc) flags+=`<div class="flag warn">${inproc} orders stuck at e&/submission — chase activation to convert ${AED(ord.filter(o=>o.status==="E& In-process"||o.status==="Submitted").reduce((s,o)=>s+o.mrc,0))} pending MRC.</div>`;
+  if(onHold) flags+=`<div class="flag warn">${onHold} orders On Hold — likely missing KYC/documents. Back office action needed.</div>`;
+  if(lost) flags+=`<div class="flag bad">${lost} opportunities marked Lost — competitor (Du/Etisalat) retention is the usual cause.</div>`;
+
+  const recs={
+    daily:["Chase the "+inproc+" submitted/in-process orders with back office before 12:00.","Re-call all 'FollowUp' leads from yesterday while intent is warm.","Lowest connect agent: coach "+low.a+" on call timing."],
+    weekly:["Reallocate fresh leads toward "+top.a+" (highest conversion this period).","Run a documentation clinic to clear On-Hold orders.","Review Negotiation-stage deals with Director for the biggest MRC."],
+    monthly:["Forecast next month from weighted pipeline ("+AED(pipe.reduce((s,p)=>s+p.mrc,0))+" open MRC).","Set commission accrual of "+AED(comm)+" for finance.","Compare activation rate vs target; adjust headcount/targets for "+(achP<70?'under':'over')+"-performance."]
+  };
+
+  return `<div class="report">
+    <h2>${period[0].toUpperCase()+period.slice(1)} ${period==='daily'?'Briefing':'Report'} — Digitalcoo e& Channel</h2>
+    <div class="meta">${today} · Scope: ${ags.length} agent(s) · Prepared by AI Advisor for ${SESSION.name}</div>
+    <b>Summary.</b> ${calls} calls logged (${connRate}% connected). Submitted MRC ${AED(subMRC)}, activated ${AED(actMRC)} → ${achP}% of target. Commission earned ${AED(comm)}. Open pipeline ${pipe.length} deals worth ${AED(pipe.reduce((s,p)=>s+p.mrc,0))} MRC.
+    <h3 style="font-size:13px;margin:14px 0 4px">Signals</h3>${flags}
+    <h3 style="font-size:13px;margin:14px 0 4px">Recommended actions</h3><ul>${recs[period].map(r=>`<li>${r}</li>`).join("")}</ul>
+    <div class="flag good">★ Top performer: <b>${top.a}</b> (${AED(top.v)} activated). Recognise in team huddle.</div>
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:10px">In the live system this is emailed/WhatsApp'd to you automatically — daily 8am, weekly Monday, monthly on the 1st — and tuned to each role.</p>`;
+}
+
+/* ============================================================
+   ADMIN / SETTINGS (extensibility)
+   ============================================================ */
+function viewAdmin(){
+  const editable=can("manage_access");
+  const roles=Object.keys(ROLES);
+  const mods=["dash","dsr","pipeline","backoffice","mis","hr","payroll","accounting","ai","admin"];
+  // Access matrix: roles x modules
+  let head=`<tr><th>Role \\ Module</th>${mods.map(m=>`<th style="text-transform:none">${NAVDEF[m].t}</th>`).join("")}</tr>`;
+  let rows=roles.map(r=>`<tr><td><b>${ROLES[r].name}</b></td>${mods.map(m=>{
+      const on=(DB.access[r]||[]).includes(m);
+      return `<td style="text-align:center"><input type="checkbox" style="width:auto" ${on?'checked':''} ${editable?'':'disabled'} onchange="toggleAccess('${r}','${m}',this.checked)"></td>`;
+    }).join("")}</tr>`).join("");
+  // Capability matrix: capability x roles
+  const caps=Object.keys(CAP_DEFAULT);
+  let chead=`<tr><th>Capability \\ Role</th>${roles.map(r=>`<th style="text-transform:none">${ROLES[r].name}</th>`).join("")}</tr>`;
+  let crows=caps.map(c=>`<tr><td><b>${CAP_LABEL[c]}</b></td>${roles.map(r=>{
+      const on=(DB.caps[c]||[]).includes(r);
+      return `<td style="text-align:center"><input type="checkbox" style="width:auto" ${on?'checked':''} ${editable?'':'disabled'} onchange="toggleCap('${c}','${r}',this.checked)"></td>`;
+    }).join("")}</tr>`).join("");
+
+  let prodRows=PRODUCTS.map(p=>`<tr><td>${p.cat}</td><td>${p.title}</td></tr>`).join("");
+
+  return `<div class="card"><h3>Module Access by Role (RBAC) ${editable?'<span class="badge">EDITABLE</span>':''}</h3>
+      <div class="scroll" style="max-height:none"><table>${head}${rows}</table></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Tick / untick to control exactly what each role sees. Changes apply instantly.</p></div>
+    <div class="card"><h3>Granular Permissions</h3>
+      <div class="scroll" style="max-height:none"><table>${chead}${crows}</table></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Example (your point 6): tick <b>"Create / manage user accounts" → HR</b> to let HR open agent accounts — without giving HR anything else. This is how you delegate safely.</p></div>
+    <div class="grid2">
+      <div class="card"><h3>Products / Plans</h3><table><tr><th>Category</th><th>Plan</th></tr>${prodRows}</table></div>
+      <div class="card"><h3>Pipeline Stages</h3><table>${PIPE_STAGES.map(s=>`<tr><td>${tag(s)}</td></tr>`).join("")}</table></div>
+    </div>
+    <div class="card"><h3>Extensibility — beyond e& <span class="badge">KEY</span></h3>
+      <p>The same engine is not limited to e&. Add a new <b>segment / business unit</b> (Delivery Riders, Limousine, Auto Repair, another Telecom brand) with its own products, stages, targets and team — dashboards, MIS, payroll and accounting roll up automatically at <b>King Group level</b>.</p>
+      <div class="row"><div><label>New Segment Name</label><input id="seg_nm" placeholder="e.g. Du Reseller / Limousine"></div>
+      <div style="flex:0"><label>&nbsp;</label><button class="btn-primary" onclick="alert('Demo: new segment scaffolded with its own pipeline, targets, team and reports — group dashboards include it automatically.')">+ Add Segment</button></div></div>
+    </div>`;
+}
+function toggleAccess(role,mod,on){
+  const a=DB.access[role]||(DB.access[role]=[]); const i=a.indexOf(mod);
+  if(on&&i<0)a.push(mod); if(!on&&i>=0)a.splice(i,1);
+  save(); if(role===SESSION.role) renderNav(); render();
+}
+function toggleCap(cap,role,on){
+  const a=DB.caps[cap]||(DB.caps[cap]=[]); const i=a.indexOf(role);
+  if(on&&i<0)a.push(role); if(!on&&i>=0)a.splice(i,1);
+  save(); render();
+}
+
+/* ============================================================
+   SHARED: permissions, modal, filter, init
+   ============================================================ */
+function can(cap){ return (DB.caps[cap]||["admin"]).includes(SESSION.role); }
+function openModal(title,bodyHTML,onSave,extraBtn=""){
+  $("modalHost").innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin:0">${title}</h3><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    ${bodyHTML}
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">${extraBtn}<button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-primary" id="mSave">Save</button></div>
+  </div></div>`;
+  $("mSave").onclick=()=>{ onSave(); closeModal(); };
+}
+function openModalInfo(title,bodyHTML){
+  $("modalHost").innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin:0">${title}</h3><button class="btn-ghost" onclick="closeModal()">✕</button></div>
+    ${bodyHTML}
+    <div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="btn-primary" onclick="closeModal()">Close</button></div>
+  </div></div>`;
+}
+function closeModal(){ $("modalHost").innerHTML=""; }
+function filterTable(id,q){
+  q=q.toLowerCase();
+  document.querySelectorAll("#"+id+" tr").forEach((tr,i)=>{ if(i===0||tr.classList.contains("frow")||tr.classList.contains("fkeep"))return; tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"; });
+}
+// Per-column search: a filter row of inputs, each filtering only its own column
+function colFilterRow(cols){
+  return `<tr class="frow">${cols.map((c,i)=>`<th>${c===null?'':`<input class="colf" placeholder="search ${String(c).replace(/[^A-Za-z ].*/,'').trim()||'…'}" data-c="${i}" oninput="colSearch(this)">`}</th>`).join("")}</tr>`;
+}
+function colSearch(inp){
+  const table=inp.closest("table");
+  const filters=[...table.querySelectorAll("tr.frow input.colf")].map(x=>({c:+x.dataset.c,v:x.value.trim().toLowerCase()})).filter(f=>f.v);
+  [...table.querySelectorAll("tr")].forEach((tr,idx)=>{
+    if(idx===0||tr.classList.contains("frow")||tr.classList.contains("fkeep"))return;
+    const cells=tr.children; let show=true;
+    for(const f of filters){ const cell=cells[f.c]; if(!cell||!cell.textContent.toLowerCase().includes(f.v)){show=false;break;} }
+    tr.style.display=show?"":"none";
+  });
+}
+
+/* ---------- init ---------- */
+renderLogin();
+</script>
+</body>
+</html>
