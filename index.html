@@ -173,12 +173,12 @@ const PIPE_STAGES = ["10%- Prospect","30% - Value Prop","50% - Negotiation","70%
 const CALL_STATUS = ["Interested","FollowUp","Not interested","Using etisalat","Using DU","Voicemail","No answer","Number not in use"];
 const ORDER_STATUS = ["Submitted","E& In-process","BO Pending","Activated","Closed","On Hold","Cancelled","Returned"];
 const PRODUCTS = [
-  {cat:"GSM (Mobile)", title:"Business First Plus"},
-  {cat:"GSM (Mobile)", title:"Business Extreme"},
-  {cat:"Fixed", title:"SOHO3"},
-  {cat:"Fixed", title:"Business On4"},
-  {cat:"Wireless", title:"IP Connect Access5"},
-  {cat:"Digital", title:"Digital Internet"}
+  {id:"PR1", cat:"GSM (Mobile)", title:"Business First Plus", mrc:200},
+  {id:"PR2", cat:"GSM (Mobile)", title:"Business Extreme", mrc:600},
+  {id:"PR3", cat:"Fixed", title:"SOHO3", mrc:475},
+  {id:"PR4", cat:"Fixed", title:"Business On4", mrc:395},
+  {id:"PR5", cat:"Wireless", title:"IP Connect Access5", mrc:500},
+  {id:"PR6", cat:"Digital", title:"Digital Internet", mrc:300}
 ];
 
 const ROLES = {
@@ -292,12 +292,13 @@ function seed(){
     {id:"N2",ts:"24 Jun 2026 09:35",to:["Ansari"],text:"New order DSR-00118 from Vani — ready to process",read:false},
     {id:"N3",ts:"23 Jun 2026 16:00",to:["Amir Qadri","Sana"],text:"Deal DSR-00007 escalated by Hira",read:true}
   ];
-  return {employees,dsr,pipeline,orders,invoices,notifications,access,caps,counters:{dsr:seq}};
+  const products=JSON.parse(JSON.stringify(PRODUCTS));
+  return {employees,dsr,pipeline,orders,invoices,notifications,products,access,caps,counters:{dsr:seq}};
 }
 
 const DBKEY="digicoo_db_v7";
 let DB = load();
-function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
 // Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
 function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
@@ -709,14 +710,14 @@ function openDeal(id){
   openModal(`Opportunity — ${p.company}`,`
     <div class="flag warn" style="margin-top:0">Ref <b>${p.dsrNo||'-'}</b> · same number flows to Back Office when won (never changes)</div>
     <div class="row"><div><label>Customer</label><input id="d_cu" value="${p.customer||''}"></div><div><label>Agent</label><input value="${p.agent}" disabled></div></div>
-    <div class="row"><div><label>Product</label><input id="d_pr" value="${p.product}"></div><div><label>Category</label><input value="${p.cat}" disabled></div></div>
+    <div class="row"><div><label>Product</label><select id="d_pr" onchange="prodPick('d')">${DB.products.map(pr=>`<option data-cat="${pr.cat}" data-mrc="${pr.mrc}" ${pr.title===p.product?'selected':''}>${pr.title}</option>`).join("")}</select></div><div><label>Category</label><input id="d_cat" value="${p.cat}" disabled></div></div>
     <div class="row"><div><label>Qty</label><input id="d_qt" type="number" value="${p.qty}"></div><div><label>Unit MRC</label><input id="d_pc" type="number" value="${p.price}"></div></div>
     <label>Stage</label><select id="d_st">${PIPE_STAGES.map(s=>`<option ${s===p.stage?'selected':''}>${s}</option>`).join("")}</select>
     <label>Remarks</label><textarea id="d_re" rows="2">${p.remarks||''}</textarea>
     <div class="flag warn" style="margin-top:12px">Annual revenue if won: <b>${AED(p.annual)}</b></div>
   `,()=>{
     const oldStage=p.stage;
-    p.customer=$("d_cu").value;p.product=$("d_pr").value;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
+    p.customer=$("d_cu").value;p.product=$("d_pr").value;p.cat=$("d_pr").selectedOptions[0].dataset.cat||p.cat;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
     p.mrc=p.qty*p.price;p.annual=p.mrc*12;p.stage=$("d_st").value;p.remarks=$("d_re").value;
     if(p.stage!==oldStage) logByDsrNo(p.dsrNo,`Pipeline stage: ${oldStage} → ${p.stage}`,"Pipeline");
     if(p.stage.includes("100%") && confirm("Deal won! Push to Back Office for order processing?")){
@@ -738,8 +739,8 @@ function addDealModal(prefill={},dsrId=null){
     ${dsrId?'<div class="flag good" style="margin-top:0">Converting <b>'+(prefill.dsrNo||'')+'</b> — '+(prefill.company||'')+' — into a sales opportunity. The DSR number stays the same end-to-end.</div>':''}
     <div class="row"><div><label>Company</label><input id="n_co" value="${prefill.company||''}"></div><div><label>Contact No.</label><input id="n_cn0" value="${prefill.contactNo||''}"></div></div>
     <label>Customer / Contact</label><input id="n_cu" value="${prefill.customer||''}">
-    <label>Product</label><select id="n_pr">${PRODUCTS.map(p=>`<option data-cat="${p.cat}">${p.title}</option>`).join("")}</select>
-    <div class="row"><div><label>Qty</label><input id="n_qt" type="number" value="1"></div><div><label>Unit MRC (AED)</label><input id="n_pc" type="number" value="200"></div></div>
+    <label>Product</label><select id="n_pr" onchange="prodPick('n')">${DB.products.map(p=>`<option data-cat="${p.cat}" data-mrc="${p.mrc}">${p.title}</option>`).join("")}</select>
+    <div class="row"><div><label>Category</label><input id="n_cat" disabled></div><div><label>Qty</label><input id="n_qt" type="number" value="1"></div><div><label>Unit MRC (AED)</label><input id="n_pc" type="number"></div></div>
     <label>Stage</label><select id="n_st">${PIPE_STAGES.map(s=>`<option ${s.includes('10%')?'selected':''}>${s}</option>`).join("")}</select>
     <label>Remarks</label><textarea id="n_re" rows="2">${prefill.remarks||''}</textarea>
   `,()=>{
@@ -753,6 +754,12 @@ function addDealModal(prefill={},dsrId=null){
     notify(mgmtChain(agent), `Lead ${recNo} converted to Pipeline by ${agent} — ${sel.value}, ${AED(qty*price)}/mo`, {dsrNo:recNo});
     save(); CURRENT="pipeline"; renderNav(); render();
   });
+  setTimeout(()=>prodPick('n'),30); // fill category + default MRC for first product
+}
+function prodPick(px){
+  const sel=document.getElementById(px+"_pr").selectedOptions[0]; if(!sel)return;
+  const c=document.getElementById(px+"_cat"); if(c) c.value=sel.dataset.cat||"";
+  const m=document.getElementById(px+"_pc"); if(m) m.value=sel.dataset.mrc||m.value;
 }
 
 /* ============================================================
@@ -1032,7 +1039,7 @@ function viewAdmin(){
       return `<td style="text-align:center"><input type="checkbox" style="width:auto" ${on?'checked':''} ${editable?'':'disabled'} onchange="toggleCap('${c}','${r}',this.checked)"></td>`;
     }).join("")}</tr>`).join("");
 
-  let prodRows=PRODUCTS.map(p=>`<tr><td>${p.cat}</td><td>${p.title}</td></tr>`).join("");
+  let prodRows=DB.products.map(p=>`<tr><td>${p.cat}</td><td>${p.title}</td><td>${AED(p.mrc)}</td>${editable?`<td style="white-space:nowrap"><button class="btn-ghost" onclick="editProduct('${p.id}')">Edit</button> <button class="btn-ghost" onclick="deleteProduct('${p.id}')">Delete</button></td>`:''}</tr>`).join("");
 
   return `<div class="card"><h3>Module Access by Role (RBAC) ${editable?'<span class="badge">EDITABLE</span>':''}</h3>
       <div class="scroll" style="max-height:none"><table>${head}${rows}</table></div>
@@ -1040,10 +1047,11 @@ function viewAdmin(){
     <div class="card"><h3>Granular Permissions</h3>
       <div class="scroll" style="max-height:none"><table>${chead}${crows}</table></div>
       <p class="muted" style="font-size:12px;margin-top:8px">Example (your point 6): tick <b>"Create / manage user accounts" → HR</b> to let HR open agent accounts — without giving HR anything else. This is how you delegate safely.</p></div>
-    <div class="grid2">
-      <div class="card"><h3>Products / Plans</h3><table><tr><th>Category</th><th>Plan</th></tr>${prodRows}</table></div>
-      <div class="card"><h3>Pipeline Stages</h3><table>${PIPE_STAGES.map(s=>`<tr><td>${tag(s)}</td></tr>`).join("")}</table></div>
+    <div class="card"><h3>Products / Plans ${editable?'<span class="badge">EDITABLE</span>':''}</h3>
+      <div class="toolbar">${editable?'<button class="btn-primary" onclick="addProductModal()">+ Add Product</button>':''}<span class="muted">Define product, category &amp; default MRC — these feed the Pipeline product dropdown (auto-fills category &amp; MRC).</span></div>
+      <table><tr><th>Category</th><th>Product / Plan</th><th>Default MRC</th>${editable?'<th></th>':''}</tr>${prodRows}</table>
     </div>
+    <div class="card"><h3>Pipeline Stages</h3><table>${PIPE_STAGES.map(s=>`<tr><td>${tag(s)}</td></tr>`).join("")}</table></div>
     <div class="card"><h3>Extensibility — beyond e& <span class="badge">KEY</span></h3>
       <p>The same engine is not limited to e&. Add a new <b>segment / business unit</b> (Delivery Riders, Limousine, Auto Repair, another Telecom brand) with its own products, stages, targets and team — dashboards, MIS, payroll and accounting roll up automatically at <b>King Group level</b>.</p>
       <div class="row"><div><label>New Segment Name</label><input id="seg_nm" placeholder="e.g. Du Reseller / Limousine"></div>
@@ -1060,6 +1068,22 @@ function toggleCap(cap,role,on){
   if(on&&i<0)a.push(role); if(!on&&i>=0)a.splice(i,1);
   save(); render();
 }
+function addProductModal(){
+  openModal("Add Product",`
+    <label>Product / Plan name</label><input id="pr_t" placeholder="e.g. Business Pro2">
+    <div class="row"><div><label>Category</label><input id="pr_c" placeholder="e.g. Fixed / GSM (Mobile)"></div>
+    <div><label>Default MRC (AED)</label><input id="pr_m" type="number" value="0"></div></div>
+  `,()=>{ if(!$("pr_t").value)return; DB.products.push({id:"PR"+Date.now(),title:$("pr_t").value,cat:$("pr_c").value||"General",mrc:+$("pr_m").value}); save(); render(); });
+}
+function editProduct(id){
+  const p=DB.products.find(x=>x.id===id); if(!p)return;
+  openModal("Edit Product",`
+    <label>Product / Plan name</label><input id="pr_t" value="${p.title}">
+    <div class="row"><div><label>Category</label><input id="pr_c" value="${p.cat}"></div>
+    <div><label>Default MRC (AED)</label><input id="pr_m" type="number" value="${p.mrc}"></div></div>
+  `,()=>{ p.title=$("pr_t").value;p.cat=$("pr_c").value;p.mrc=+$("pr_m").value; save(); render(); });
+}
+function deleteProduct(id){ if(confirm("Delete this product?")){ DB.products=DB.products.filter(x=>x.id!==id); save(); render(); } }
 
 /* ============================================================
    SHARED: permissions, modal, filter, init
