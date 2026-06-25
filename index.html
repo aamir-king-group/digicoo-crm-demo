@@ -304,14 +304,29 @@ function statusColor(s){
 const tag=s=>`<span class="tag" style="background:${statusColor(s)}22;color:${statusColor(s)}">${s}</span>`;
 
 /* ---------- Login ---------- */
+// Open (no password) roles vs password-protected roles
+const PROTECTED_ROLES=["accountant","hr","admin"];
+const ROLE_PASSWORD="digi2026"; // DEMO ONLY — change for production / real auth
 function renderLogin(){
   const g=$("roleGrid"); g.innerHTML="";
   const map=[["agent","Hira"],["team_leader","Joy"],["teams_head","Sana"],["sales_head","Amir Qadri"],["backoffice","Ansari"],["accountant","ABC"],["hr","Fatima"],["admin","Admin"]];
   map.forEach(([r,nm])=>{
     const b=document.createElement("button"); b.className="role-btn";
-    b.innerHTML=`<b>${nm}</b><small>${ROLES[r].name}</small>`;
-    b.onclick=()=>doLogin(r,nm); g.appendChild(b);
+    const locked=PROTECTED_ROLES.includes(r);
+    b.innerHTML=`<b>${nm}${locked?' <span style="color:var(--amber)">🔒</span>':''}</b><small>${ROLES[r].name}${locked?' · password':''}</small>`;
+    b.onclick=()=>attemptLogin(r,nm); g.appendChild(b);
   });
+}
+function attemptLogin(role,name){
+  if(PROTECTED_ROLES.includes(role)){
+    openModal(`🔒 ${ROLES[role].name} — enter password`,
+      `<label>Password</label><input id="pw" type="password" placeholder="••••••••">
+       <p class="muted" style="font-size:12px">This role is password-protected. Enter the access password to continue.</p>`,
+      ()=>{ if(document.getElementById("pw").value===ROLE_PASSWORD){ doLogin(role,name); } else { alert("Wrong password. Try again."); renderLogin(); } });
+    setTimeout(()=>{const f=document.getElementById("pw"); if(f){f.focus(); f.onkeydown=e=>{if(e.key==='Enter')document.getElementById("mSave").click();};}},50);
+    return;
+  }
+  doLogin(role,name);
 }
 function doLogin(role,name){
   SESSION={role,name};
