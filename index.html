@@ -331,7 +331,11 @@ const dsrSeqNum=no=>parseInt(String(no||"").replace(/\D/g,""))||0;
 // ---- Audit log / change history (immutable trail) ----
 const nowTs=()=>new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 function addLog(entry,text,stage){ if(!entry)return; (entry.history=entry.history||[]).push({ts:nowTs(),user:(SESSION&&SESSION.name)||'system',stage:stage||'DSR',text}); }
-function logByDsrNo(no,text,stage){ addLog(DB.dsr.find(x=>x.dsrNo===no),text,stage); }
+function logByDsrNo(no,text,stage){
+  const d=DB.dsr.find(x=>x.dsrNo===no);
+  if(d){ addLog(d,text,stage); }
+  else { DB.threads=DB.threads||{}; (DB.threads[no]=DB.threads[no]||[]).push({ts:nowTs(),user:(SESSION&&SESSION.name)||"system",role:"system",type:"sys",stage:stage||"Update",text}); }
+}
 function resetDemo(){ if(confirm("Reset all demo data to original sample?")){ DB=seed(); save(); render(); } }
 
 let SESSION=null;
@@ -613,7 +617,7 @@ function updateDSR(id){
     <label>Remarks</label><textarea id="u_re" rows="3">${d.remarks||''}</textarea>
   `,()=>{
     const nv={customer:$("u_cu").value,contactNo:$("u_cn0").value,status:$("u_st").value,connected:$("u_cn").value,remarks:$("u_re").value};
-    if(nv.status!==d.status){ addLog(d,`Status: ${d.status} → ${nv.status}`); notify(mgmtChain(d.agent).slice(0,1), `DSR ${d.dsrNo} status → ${nv.status} (by ${SESSION.name})`, {dsrNo:d.dsrNo}); }
+    if(nv.status!==d.status){ addLog(d,`Status: ${d.status} → ${nv.status}`); }
     if(nv.connected!==d.connected) addLog(d,`Connected: ${d.connected} → ${nv.connected}`);
     if(nv.customer!==(d.customer||"")) addLog(d,`Customer: "${d.customer||''}" → "${nv.customer}"`);
     if(nv.contactNo!==(d.contactNo||"")) addLog(d,`Contact No updated`);
@@ -749,10 +753,17 @@ function openDeal(id){
     <label>Remarks</label><textarea id="d_re" rows="2">${p.remarks||''}</textarea>
     <div class="flag warn" style="margin-top:12px">Annual revenue if won: <b>${AED(p.annual)}</b></div>
   `,()=>{
-    const oldStage=p.stage;
+    const oldStage=p.stage, oldProd=p.product, oldQty=p.qty, oldPrice=p.price, oldCust=p.customer||"", oldRem=p.remarks||"";
     p.customer=$("d_cu").value;p.product=$("d_pr").value;p.cat=$("d_pr").selectedOptions[0].dataset.cat||p.cat;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
     p.mrc=p.qty*p.price;p.annual=p.mrc*12;p.stage=$("d_st").value;p.remarks=$("d_re").value;
     if(p.stage!==oldStage) logByDsrNo(p.dsrNo,`Pipeline stage: ${oldStage} → ${p.stage}`,"Pipeline");
+    const ch=[];
+    if(p.product!==oldProd) ch.push(`product → ${p.product}`);
+    if(p.qty!==oldQty) ch.push(`qty → ${p.qty}`);
+    if(p.price!==oldPrice) ch.push(`unit MRC → ${AED(p.price)}`);
+    if((p.customer||"")!==oldCust) ch.push("customer updated");
+    if((p.remarks||"")!==oldRem) ch.push("remarks updated");
+    if(ch.length) logByDsrNo(p.dsrNo,`Pipeline updated · ${ch.join(", ")}`,"Pipeline");
     if(p.stage.includes("100%") && confirm("Deal won! Send to Back Office for processing?")){
       let o=DB.orders.find(x=>x.dsrNo===p.dsrNo);
       if(o){ o.status="Submitted"; o.qty=p.qty; o.mrc=p.mrc; o.product=p.product; o.cat=p.cat; o.commission=Math.round(p.mrc*0.15); o.remarks="Deal won — ready to process"; }
@@ -871,7 +882,7 @@ function caseStakeholders(dsrNo){ const c=caseContext(dsrNo); return [...new Set
 function seenKey(){ return "digicoo_seen_"+((SESSION&&SESSION.name)||"x"); }
 function loadSeen(){ try{ SEEN=JSON.parse(localStorage.getItem(seenKey())||"{}"); }catch(e){ SEEN={}; } }
 function markSeen(dsrNo){ const t=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo].length:0; SEEN[dsrNo]=t; try{ localStorage.setItem(seenKey(),JSON.stringify(SEEN)); }catch(e){} }
-function unreadCount(dsrNo){ const t=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo]:[]; const seen=SEEN[dsrNo]||0; let n=0; for(let i=seen;i<t.length;i++){ if(t[i].user!==(SESSION&&SESSION.name)) n++; } return n; }
+function unreadCount(dsrNo){ const t=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo]:[]; const seen=SEEN[dsrNo]||0; let n=0; for(let i=seen;i<t.length;i++){ if(t[i].type!=="sys" && t[i].user!==(SESSION&&SESSION.name)) n++; } return n; }
 function chatBtn(dsrNo){
   const u=unreadCount(dsrNo);
   return `<button class="btn-ghost chatbtn" onclick="openCase('${dsrNo}')" title="Case chat &amp; documents">💬${u>0?`<span class="cbadge">${u>9?'9+':u}</span>`:''}</button>`;
