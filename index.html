@@ -148,9 +148,9 @@ input.colf::placeholder{color:#5c6c8c}
   <div class="login-card">
     <div class="logo">Digi<span>coo</span> CRM</div>
     <p class="muted" style="margin:6px 0 18px">e& Authorised Channel Partner — Operations Platform <span class="badge">DEMO</span></p>
-    <label>Sign in as a role to see permissions in action</label>
+    <label>Sign in to your portal</label>
     <div class="role-grid" id="roleGrid"></div>
-    <p class="muted" style="font-size:11px;margin-top:16px">Sample data only. Everything is editable. Your data stays in this browser.</p>
+    <p class="muted" style="font-size:11px;margin-top:16px">Each user has their own login. Demo data only — your changes stay in this browser.</p>
   </div>
 </div>
 
@@ -183,6 +183,7 @@ input.colf::placeholder{color:#5c6c8c}
 <div id="toastHost" class="toastwrap"></div>
 <div id="caseHost"></div>
 
+<script src="joydata.js"></script>
 <script>
 /* ============================================================
    DIGITALCOO CRM — DEMO PROTOTYPE
@@ -252,6 +253,8 @@ function seed(){
     {id:"E03",name:"OB",role:"agent",desig:"Sales Agent",tl:"Maria",reportsTo:"Maria",target:7000,salary:4500,join:"2025-11-10",dept:"e& Sales"},
     {id:"E04",name:"Samjith",role:"agent",desig:"Sr. Sales Agent",tl:"Maria",reportsTo:"Maria",target:6000,salary:5000,join:"2025-09-01",dept:"e& Sales"},
     {id:"E05",name:"Kiran",role:"agent",desig:"Sales Agent",tl:"Rahul",reportsTo:"Rahul",target:5000,salary:4000,join:"2026-02-01",dept:"e& Sales"},
+    {id:"E15",name:"Naushad",role:"agent",desig:"Sales Agent",tl:"Joy",reportsTo:"Joy",target:5000,salary:4000,join:"2026-05-01",dept:"e& Sales"},
+    {id:"E16",name:"Obina",role:"agent",desig:"Sales Agent",tl:"Joy",reportsTo:"Joy",target:5000,salary:4000,join:"2026-02-01",dept:"e& Sales"},
     // Team Leaders (reportsTo = Teams Head)
     {id:"E06",name:"Joy",role:"team_leader",desig:"Team Leader — Team A",tl:"-",reportsTo:"Sana",target:25000,salary:8000,join:"2025-06-01",dept:"e& Sales"},
     {id:"E07",name:"Maria",role:"team_leader",desig:"Team Leader — Team B",tl:"-",reportsTo:"Sana",target:30000,salary:8500,join:"2025-03-01",dept:"e& Sales"},
@@ -266,6 +269,7 @@ function seed(){
     {id:"E13",name:"Fatima",role:"hr",desig:"HR Officer",tl:"-",reportsTo:"Admin",target:0,salary:8500,join:"2025-04-01",dept:"HR"},
     {id:"E14",name:"Admin",role:"admin",desig:"System Administrator",tl:"-",reportsTo:"-",target:0,salary:0,join:"2025-01-01",dept:"Management"}
   ];
+  employees.forEach(e=>{ e.username=defUser(e.name); e.password=defUser(e.name)+"@2026"; });
   const companies=["PURE EARTH EQUIPMENT","LUTECH COMPOSITES","AL SAMIAH CARPETS","DARK REAL ESTATE","TRUSV AIR DUCT","PACKNEXA INDUSTRIES","MEAMAR BUILDING","SUNLUX ELECTROMECH","TECTONIC ELECTROMECH","SKY & SEA INTL","BRAVA TECHNO","IPS CERTIFICATION","LIVENDO PROPERTIES","AENAV","ORTEK MEDICAL","CAPITAL ZONE DELIVERY","AL REWAYA TYPING","QABIL GROUP","SMART SENSE SUPPLIES","WEST ONE TRADING"];
   const agents=["Hira","Vani","OB","Samjith","Kiran"];
   const tlMap={Hira:"Joy",Vani:"Joy",OB:"Maria",Samjith:"Maria",Kiran:"Rahul"};
@@ -284,6 +288,13 @@ function seed(){
     const src=dsr[idx];
     dsr.unshift({id:"DUP"+k,dsrNo:dno(),date:"2026-06-2"+(2+k),agent:ag2,tl:tlMap[ag2],company:src.company,building:src.building,contactNo:src.contactNo,customer:src.customer,status:"FollowUp",remarks:"Re-contacting same company",connected:"YES",history:[{ts:"2"+(2+k)+" Jun 2026 10:00",user:ag2,stage:"DSR",text:"DSR created · status set to FollowUp"}]});
   });
+  // ---- Real imported Joy-team DSR data (Naushad, Obina, Vani) from uploaded sheets ----
+  if(typeof window!=="undefined" && Array.isArray(window.JOY_IMPORT)){
+    window.JOY_IMPORT.forEach(row=>{
+      const no=dno();
+      dsr.push({id:"IMP"+seq,dsrNo:no,date:row.d||"",agent:row.a,tl:"Joy",company:row.co||"",building:"",contactNo:row.cn||"",customer:row.cu||"",status:row.s||"No status",remarks:row.r||"",connected:row.x||"",imported:true,history:[{ts:(row.d||"")+" 09:00",user:row.a,stage:"DSR",text:"DSR imported · status "+(row.s||"")}]});
+    });
+  }
   for(let i=0;i<22;i++){
     const ag=agents[i%agents.length];
     const pr=PRODUCTS[i%PRODUCTS.length];
@@ -321,9 +332,9 @@ function seed(){
   return {employees,dsr,pipeline,orders,invoices,notifications,products,threads,access,caps,counters:{dsr:seq}};
 }
 
-const DBKEY="digicoo_db_v8";
+const DBKEY="digicoo_db_v9";
 let DB = load();
-function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; if(d.employees)d.employees.forEach(e=>{ if(!e.username)e.username=defUser(e.name); if(!e.password)e.password=defUser(e.name)+"@2026"; }); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
 // Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
 function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
@@ -421,30 +432,23 @@ function statusColor(s){
 }
 const tag=s=>`<span class="tag" style="background:${statusColor(s)}22;color:${statusColor(s)}">${s}</span>`;
 
-/* ---------- Login ---------- */
-// Open (no password) roles vs password-protected roles
-const PROTECTED_ROLES=["accountant","hr","admin"];
-const ROLE_PASSWORD="digi2026"; // DEMO ONLY — change for production / real auth
+/* ---------- Login (per-employee username + password) ---------- */
+function defUser(name){ return String(name).toLowerCase().replace(/[^a-z0-9]/g,""); }
 function renderLogin(){
-  const g=$("roleGrid"); g.innerHTML="";
-  const map=[["agent","Hira"],["team_leader","Joy"],["teams_head","Sana"],["sales_head","Amir Qadri"],["backoffice","Ansari"],["accountant","ABC"],["hr","Fatima"],["admin","Admin"]];
-  map.forEach(([r,nm])=>{
-    const b=document.createElement("button"); b.className="role-btn";
-    const locked=PROTECTED_ROLES.includes(r);
-    b.innerHTML=`<b>${nm}${locked?' <span style="color:var(--amber)">🔒</span>':''}</b><small>${ROLES[r].name}${locked?' · password':''}</small>`;
-    b.onclick=()=>attemptLogin(r,nm); g.appendChild(b);
-  });
+  const g=$("roleGrid"); g.className="";
+  g.innerHTML=`
+    <label>Username</label><input id="lg_u" placeholder="your username" autocomplete="username">
+    <label>Password</label><input id="lg_p" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn-primary" style="width:100%;margin-top:14px" onclick="loginSubmit()">Sign in to my portal</button>
+    <div id="lg_err" style="color:var(--brand2);font-size:12px;margin-top:8px;min-height:16px"></div>`;
+  setTimeout(()=>{ const u=document.getElementById("lg_u"); if(u){ u.focus(); u.onkeydown=e=>{if(e.key==='Enter')document.getElementById("lg_p").focus();}; document.getElementById("lg_p").onkeydown=e=>{if(e.key==='Enter')loginSubmit();}; } },40);
 }
-function attemptLogin(role,name){
-  if(PROTECTED_ROLES.includes(role)){
-    openModal(`🔒 ${ROLES[role].name} — enter password`,
-      `<label>Password</label><input id="pw" type="password" placeholder="••••••••">
-       <p class="muted" style="font-size:12px">This role is password-protected. Enter the access password to continue.</p>`,
-      ()=>{ if(document.getElementById("pw").value===ROLE_PASSWORD){ doLogin(role,name); } else { alert("Wrong password. Try again."); renderLogin(); } });
-    setTimeout(()=>{const f=document.getElementById("pw"); if(f){f.focus(); f.onkeydown=e=>{if(e.key==='Enter')document.getElementById("mSave").click();};}},50);
-    return;
-  }
-  doLogin(role,name);
+function loginSubmit(){
+  const u=(document.getElementById("lg_u").value||"").trim().toLowerCase();
+  const p=document.getElementById("lg_p").value||"";
+  const e=DB.employees.find(x=>(x.username||"").toLowerCase()===u && (x.password||"")===p);
+  if(e){ doLogin(e.role,e.name); }
+  else { document.getElementById("lg_err").textContent="Invalid username or password."; }
 }
 function doLogin(role,name){
   SESSION={role,name};
@@ -1040,8 +1044,9 @@ function openEmp(id){
     <label>System Role (controls access)</label><select id="e_rl">${Object.keys(ROLES).map(r=>`<option value="${r}" ${r===e.role?'selected':''}>${ROLES[r].name}</option>`).join("")}</select>
     <div class="row"><div><label>Department</label><input id="e_dp" value="${e.dept}"></div><div><label>Reports To</label><input id="e_tl" value="${e.tl}"></div></div>
     <div class="row"><div><label>Monthly Salary (AED)</label><input id="e_sal" type="number" value="${e.salary}"></div><div><label>Monthly Target (MRC)</label><input id="e_tg" type="number" value="${e.target}"></div></div>
+    <div class="row"><div><label>Login Username</label><input id="e_un" value="${e.username||''}"></div><div><label>Login Password</label><input id="e_pw" value="${e.password||''}"></div></div>
   `,()=>{
-    e.name=$("e_nm").value;e.desig=$("e_dg").value;e.role=$("e_rl").value;e.dept=$("e_dp").value;e.tl=$("e_tl").value;e.salary=+$("e_sal").value;e.target=+$("e_tg").value;
+    e.name=$("e_nm").value;e.desig=$("e_dg").value;e.role=$("e_rl").value;e.dept=$("e_dp").value;e.tl=$("e_tl").value;e.salary=+$("e_sal").value;e.target=+$("e_tg").value;e.username=$("e_un").value;e.password=$("e_pw").value;
     save(); render();
   });
 }
@@ -1051,8 +1056,10 @@ function addEmpModal(){
     <label>System Role</label><select id="a_rl">${Object.keys(ROLES).map(r=>`<option value="${r}">${ROLES[r].name}</option>`).join("")}</select>
     <div class="row"><div><label>Department</label><input id="a_dp" value="e& Sales"></div><div><label>Reports To</label><input id="a_tl" value="Joy"></div></div>
     <div class="row"><div><label>Salary (AED)</label><input id="a_sal" type="number" value="4000"></div><div><label>Target (MRC)</label><input id="a_tg" type="number" value="5000"></div></div>
+    <div class="row"><div><label>Login Username</label><input id="a_un" placeholder="auto from name if blank"></div><div><label>Login Password</label><input id="a_pw" placeholder="auto if blank"></div></div>
   `,()=>{
-    DB.employees.push({id:"E"+(DB.employees.length+1).toString().padStart(2,'0'),name:$("a_nm").value,role:$("a_rl").value,desig:$("a_dg").value,tl:$("a_tl").value,mgr:"Maria",target:+$("a_tg").value,salary:+$("a_sal").value,join:new Date().toISOString().slice(0,10),dept:$("a_dp").value});
+    const nm=$("a_nm").value;
+    DB.employees.push({id:"E"+(DB.employees.length+1).toString().padStart(2,'0'),name:nm,role:$("a_rl").value,desig:$("a_dg").value,tl:$("a_tl").value,reportsTo:$("a_tl").value,mgr:"Maria",target:+$("a_tg").value,salary:+$("a_sal").value,join:new Date().toISOString().slice(0,10),dept:$("a_dp").value,username:$("a_un").value||defUser(nm),password:$("a_pw").value||defUser(nm)+"@2026"});
     save(); render();
   });
 }
@@ -1218,6 +1225,11 @@ function viewAdmin(){
     <div class="card"><h3>Granular Permissions</h3>
       <div class="scroll" style="max-height:none"><table>${chead}${crows}</table></div>
       <p class="muted" style="font-size:12px;margin-top:8px">Example (your point 6): tick <b>"Create / manage user accounts" → HR</b> to let HR open agent accounts — without giving HR anything else. This is how you delegate safely.</p></div>
+    <div class="card"><h3>User Logins <span class="badge">ADMIN</span></h3>
+      <p class="muted" style="font-size:12px;margin-top:0">Each employee signs in with their own username &amp; password. Distribute these; edit any in HR ▸ Employee.</p>
+      <div class="scroll" style="max-height:34vh"><table><tr><th>Name</th><th>Role</th><th>Username</th><th>Password</th></tr>
+      ${DB.employees.map(e=>`<tr><td>${e.name}</td><td>${ROLES[e.role].name}</td><td><b style="color:var(--brand2)">${e.username||''}</b></td><td>${e.password||''}</td></tr>`).join("")}
+      </table></div></div>
     <div class="card"><h3>Products / Plans ${editable?'<span class="badge">EDITABLE</span>':''}</h3>
       <div class="toolbar">${editable?'<button class="btn-primary" onclick="addProductModal()">+ Add Product</button>':''}<span class="muted">Define product, category &amp; default MRC — these feed the Pipeline product dropdown (auto-fills category &amp; MRC).</span></div>
       <table><tr><th>Category</th><th>Product / Plan</th><th>Default MRC</th>${editable?'<th></th>':''}</tr>${prodRows}</table>
