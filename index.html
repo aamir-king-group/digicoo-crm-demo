@@ -306,9 +306,9 @@ function seed(){
   const access=JSON.parse(JSON.stringify(ACCESS_DEFAULT));
   const caps=JSON.parse(JSON.stringify(CAP_DEFAULT));
   const notifications=[
-    {id:"N1",ts:"24 Jun 2026 09:10",to:["Joy"],text:"New DSR DSR-00012 by Hira — LIVENDO PROPERTIES (Interested)",read:false},
-    {id:"N2",ts:"24 Jun 2026 09:35",to:["Ansari"],text:"New order DSR-00118 from Vani — ready to process",read:false},
-    {id:"N3",ts:"23 Jun 2026 16:00",to:["Amir Qadri","Sana"],text:"Deal DSR-00007 escalated by Hira",read:true}
+    {id:"N1",ts:"24 Jun 2026 09:10",to:["Joy"],text:"New DSR DSR-00012 by Hira — LIVENDO PROPERTIES (Interested)",read:false,dsrNo:"DSR-00012"},
+    {id:"N2",ts:"24 Jun 2026 09:35",to:["Ansari"],text:"New order DSR-00118 from Vani — ready to process",read:false,dsrNo:"DSR-00118"},
+    {id:"N3",ts:"23 Jun 2026 16:00",to:["Amir Qadri","Sana"],text:"Deal DSR-00007 escalated by Hira",read:true,dsrNo:"DSR-00007"}
   ];
   const products=JSON.parse(JSON.stringify(PRODUCTS));
   const threads={"DSR-00091":[
@@ -347,7 +347,7 @@ function onRemoteChange(){
   try{ const s=localStorage.getItem(DBKEY); if(s) DB=JSON.parse(s); }catch(e){ return; }
   if(!SESSION) return;
   renderBell();
-  myNotifs().filter(n=>!n.read && !toastedIds.has(n.id)).forEach(n=>{ toastedIds.add(n.id); toast(n.text); });
+  myNotifs().filter(n=>!n.read && !toastedIds.has(n.id)).forEach(n=>{ toastedIds.add(n.id); toast(n.text, n.dsrNo); });
   render(); // live-refresh dashboard / current view
   if(CASE_OPEN) openCase(CASE_OPEN); // live-refresh open case chat
 }
@@ -378,7 +378,7 @@ function toggleNotif(ev){
   if(ev) ev.stopPropagation();
   const list=myNotifs();
   const body=list.length
-    ? list.slice(0,40).map(n=>`<div class="notif ${n.read?'read':'unread'}"><div class="dot"></div><div style="flex:1"><div>${n.text}</div><small>${n.ts}</small></div></div>`).join("")
+    ? list.slice(0,40).map(n=>`<div class="notif ${n.read?'read':'unread'}" style="cursor:${n.dsrNo?'pointer':'default'}" onclick="notifClick('${n.id}')"><div class="dot"></div><div style="flex:1"><div>${n.text}</div><small>${n.ts}${n.dsrNo?' · <span style="color:var(--brand2)">open chat ›</span>':''}</small></div></div>`).join("")
     : '<p class="muted" style="padding:16px">No notifications yet.</p>';
   document.getElementById("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div>
     <div class="notifpanel" style="right:24px;top:62px">
@@ -389,10 +389,16 @@ function toggleNotif(ev){
   list.forEach(n=>n.read=true); save(); renderBell();
 }
 function markAllRead(){ myNotifs().forEach(n=>n.read=true); save(); renderBell(); closeMenu(); }
-function toast(text){
+function notifClick(id){
+  const n=(DB.notifications||[]).find(x=>x.id===id);
+  closeMenu();
+  if(n){ n.read=true; save(); renderBell(); if(n.dsrNo) openCase(n.dsrNo); }
+}
+function toast(text,dsrNo){
   const host=document.getElementById("toastHost"); if(!host) return;
   const d=document.createElement("div"); d.className="toast";
-  d.innerHTML=`<b>🔔 New notification</b><div style="margin-top:4px">${text}</div>`;
+  if(dsrNo){ d.style.cursor="pointer"; d.onclick=()=>{ d.remove(); openCase(dsrNo); }; }
+  d.innerHTML=`<b>🔔 New notification</b><div style="margin-top:4px">${text}</div>${dsrNo?'<div><small style="color:var(--brand2)">click to open chat ›</small></div>':''}`;
   host.appendChild(d);
   setTimeout(()=>{ d.style.opacity="0"; setTimeout(()=>d.remove(),400); }, 6500);
 }
