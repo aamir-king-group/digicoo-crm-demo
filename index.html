@@ -107,6 +107,19 @@ input.colf::placeholder{color:#5c6c8c}
 .menucard .mi{display:block;width:100%;text-align:left;background:transparent;color:var(--txt);padding:9px 11px;border-radius:6px;font-weight:600;font-size:13px}
 .menucard .mi:hover{background:var(--panel2)}
 .menucard .mi.disabled{color:var(--muted);cursor:default}
+.bell{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:16px;cursor:pointer;margin-right:10px;color:var(--txt)}
+.bell:hover{border-color:var(--brand2)}
+.bellbadge{position:absolute;top:-7px;right:-7px;background:var(--brand);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;line-height:1.5}
+.notifpanel{position:fixed;z-index:61;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.55);width:360px;max-height:64vh;overflow:auto;padding:8px}
+.notif{display:flex;gap:10px;padding:11px 10px;border-bottom:1px solid var(--line)}
+.notif.unread{background:rgba(227,6,19,.07)}
+.notif .dot{width:8px;height:8px;border-radius:50%;background:var(--brand2);margin-top:5px;flex:0 0 8px}
+.notif.read .dot{background:transparent;border:1px solid var(--line)}
+.notif small{color:var(--muted)}
+.toastwrap{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--panel);border:1px solid var(--brand2);border-left:4px solid var(--brand2);border-radius:10px;padding:12px 14px;width:330px;box-shadow:0 12px 30px rgba(0,0,0,.5);font-size:13px;animation:slidein .25s ease;transition:opacity .4s}
+.toast b{color:var(--brand2)}
+@keyframes slidein{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -136,6 +149,7 @@ input.colf::placeholder{color:#5c6c8c}
     <div class="topbar">
       <h1 id="pageTitle">Dashboard</h1>
       <div class="who">
+        <button class="bell" onclick="toggleNotif(event)" title="Notifications">🔔<span id="bellCount" class="bellbadge hidden">0</span></button>
         <div class="right"><div id="whoName" style="font-weight:700"></div><div class="muted" id="whoRole" style="font-size:12px"></div></div>
         <div class="avatar" id="whoAv">A</div>
       </div>
@@ -147,6 +161,7 @@ input.colf::placeholder{color:#5c6c8c}
 
 <div id="modalHost"></div>
 <div id="menuHost"></div>
+<div id="toastHost" class="toastwrap"></div>
 
 <script>
 /* ============================================================
@@ -272,13 +287,18 @@ function seed(){
   ];
   const access=JSON.parse(JSON.stringify(ACCESS_DEFAULT));
   const caps=JSON.parse(JSON.stringify(CAP_DEFAULT));
-  return {employees,dsr,pipeline,orders,invoices,access,caps,counters:{dsr:seq}};
+  const notifications=[
+    {id:"N1",ts:"24 Jun 2026 09:10",to:["Joy"],text:"New DSR DSR-00012 by Hira — LIVENDO PROPERTIES (Interested)",read:false},
+    {id:"N2",ts:"24 Jun 2026 09:35",to:["Ansari"],text:"New order DSR-00118 from Vani — ready to process",read:false},
+    {id:"N3",ts:"23 Jun 2026 16:00",to:["Amir Qadri","Sana"],text:"Deal DSR-00007 escalated by Hira",read:true}
+  ];
+  return {employees,dsr,pipeline,orders,invoices,notifications,access,caps,counters:{dsr:seq}};
 }
 
-const DBKEY="digicoo_db_v6";
+const DBKEY="digicoo_db_v7";
 let DB = load();
-function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
-function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); }
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
 // Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
 function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
 const dsrSeqNum=no=>parseInt(String(no||"").replace(/\D/g,""))||0;
@@ -290,6 +310,67 @@ function resetDemo(){ if(confirm("Reset all demo data to original sample?")){ DB
 
 let SESSION=null;
 let CURRENT="dash";
+
+/* ============================================================
+   LIVE SYNC + NOTIFICATIONS
+   Cross-tab real-time via BroadcastChannel (+ storage fallback).
+   In production this layer is replaced by server push (WebSocket).
+   ============================================================ */
+var BC=null, toastedIds=new Set();
+try{ BC=new BroadcastChannel("digicoo_crm_"+DBKEY); BC.onmessage=onRemoteChange; }catch(e){}
+try{ window.addEventListener("storage",e=>{ if(e.key===DBKEY) onRemoteChange(); }); }catch(e){}
+function onRemoteChange(){
+  try{ const s=localStorage.getItem(DBKEY); if(s) DB=JSON.parse(s); }catch(e){ return; }
+  if(!SESSION) return;
+  renderBell();
+  myNotifs().filter(n=>!n.read && !toastedIds.has(n.id)).forEach(n=>{ toastedIds.add(n.id); toast(n.text); });
+  render(); // live-refresh dashboard / current view
+}
+function empBy(name){ return DB.employees.find(e=>e.name===name); }
+function mgmtChain(agentName){
+  const a=empBy(agentName)||{};
+  const tl=(a.tl&&a.tl!=="-")?a.tl:null;
+  const th=tl?((empBy(tl)||{}).reportsTo||null):null;
+  const sh=(DB.employees.find(e=>e.role==="sales_head")||{}).name||null;
+  return [tl,th,sh].filter(Boolean);
+}
+const backOfficeNames=()=>DB.employees.filter(e=>e.role==="backoffice").map(e=>e.name);
+const salesHeadName=()=>(DB.employees.find(e=>e.role==="sales_head")||{}).name;
+function notify(toNames,text,meta){
+  toNames=[...new Set((toNames||[]).filter(Boolean))];
+  if(!toNames.length) return;
+  DB.notifications=DB.notifications||[];
+  DB.notifications.unshift({id:"N"+Date.now()+Math.floor(Math.random()*1000),ts:nowTs(),to:toNames,text,read:false,...(meta||{})});
+}
+function myNotifs(){ return (DB.notifications||[]).filter(n=>n.to&&SESSION&&n.to.includes(SESSION.name)); }
+function renderBell(){
+  const el=document.getElementById("bellCount"); if(!el||!SESSION) return;
+  const u=myNotifs().filter(n=>!n.read).length;
+  if(u>0){ el.textContent=u>99?"99+":String(u); el.classList.remove("hidden"); }
+  else el.classList.add("hidden");
+}
+function toggleNotif(ev){
+  if(ev) ev.stopPropagation();
+  const list=myNotifs();
+  const body=list.length
+    ? list.slice(0,40).map(n=>`<div class="notif ${n.read?'read':'unread'}"><div class="dot"></div><div style="flex:1"><div>${n.text}</div><small>${n.ts}</small></div></div>`).join("")
+    : '<p class="muted" style="padding:16px">No notifications yet.</p>';
+  document.getElementById("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div>
+    <div class="notifpanel" style="right:24px;top:62px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px 10px">
+        <b>Notifications</b>${list.some(n=>!n.read)?'<button class="btn-ghost" style="padding:4px 10px" onclick="markAllRead()">Mark all read</button>':''}
+      </div>${body}</div>`;
+  // opening marks them read
+  list.forEach(n=>n.read=true); save(); renderBell();
+}
+function markAllRead(){ myNotifs().forEach(n=>n.read=true); save(); renderBell(); closeMenu(); }
+function toast(text){
+  const host=document.getElementById("toastHost"); if(!host) return;
+  const d=document.createElement("div"); d.className="toast";
+  d.innerHTML=`<b>🔔 New notification</b><div style="margin-top:4px">${text}</div>`;
+  host.appendChild(d);
+  setTimeout(()=>{ d.style.opacity="0"; setTimeout(()=>d.remove(),400); }, 6500);
+}
 
 /* ---------- Helpers ---------- */
 const AED=n=>"AED "+Math.round(n||0).toLocaleString();
@@ -335,6 +416,7 @@ function doLogin(role,name){
   $("whoName").textContent=name; $("whoRole").textContent=ROLES[role].name;
   $("whoAv").textContent=name[0];
   CURRENT="dash"; renderNav(); render();
+  toastedIds=new Set((DB.notifications||[]).map(n=>n.id)); renderBell();
 }
 function logout(){ SESSION=null; $("app").style.display="none"; $("login").style.display="flex"; }
 
@@ -356,6 +438,7 @@ function render(){
     backoffice:viewBackoffice, mis:viewMIS, hr:viewHR, payroll:viewPayroll,
     accounting:viewAccounting, ai:viewAI, admin:viewAdmin
   }[CURRENT])();
+  renderBell();
 }
 
 /* ---------- Scope: which agents can current user see ---------- */
@@ -476,9 +559,11 @@ function addDSRModal(){
     const st=$("m_st").value;
     const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:SESSION.role==="agent"?SESSION.name:"Hira",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
     addLog(entry,"DSR created · status set to "+st);
-    DB.dsr.unshift(entry); save();
+    DB.dsr.unshift(entry);
+    notify(mgmtChain(entry.agent).slice(0,2), `New DSR ${entry.dsrNo} by ${entry.agent}: ${entry.company||'—'} (${st})`, {dsrNo:entry.dsrNo});
+    save();
     const dup=priorContact(entry);
-    if(dup){ addLog(entry,`⚠ Duplicate — earlier contact ${dup.no} by ${dup.by} on ${dup.date} (matched ${dup.matchType})`); save(); }
+    if(dup){ addLog(entry,`⚠ Duplicate — earlier contact ${dup.no} by ${dup.by} on ${dup.date} (matched ${dup.matchType})`); notify([dup.by,...mgmtChain(entry.agent).slice(0,1)], `⚠ Possible duplicate ${entry.dsrNo} — ${entry.company} also contacted by ${dup.by}`, {dsrNo:entry.dsrNo}); save(); }
     render();
     if(dup){ alert(`⚠ Duplicate contact!\n\nThis ${dup.matchType==='number'?'number':'company'} was already called by ${dup.by} on ${dup.date} (${dup.no}).\n\nCoordinate before re-contacting.`); }
     if(st==="Interested" && confirm("Marked Interested — convert this lead to a pipeline opportunity now?")){ convertToPipeline(entry.id); }
@@ -493,7 +578,7 @@ function updateDSR(id){
     <label>Remarks</label><textarea id="u_re" rows="3">${d.remarks||''}</textarea>
   `,()=>{
     const nv={customer:$("u_cu").value,contactNo:$("u_cn0").value,status:$("u_st").value,connected:$("u_cn").value,remarks:$("u_re").value};
-    if(nv.status!==d.status) addLog(d,`Status: ${d.status} → ${nv.status}`);
+    if(nv.status!==d.status){ addLog(d,`Status: ${d.status} → ${nv.status}`); notify(mgmtChain(d.agent).slice(0,1), `DSR ${d.dsrNo} status → ${nv.status} (by ${SESSION.name})`, {dsrNo:d.dsrNo}); }
     if(nv.connected!==d.connected) addLog(d,`Connected: ${d.connected} → ${nv.connected}`);
     if(nv.customer!==(d.customer||"")) addLog(d,`Customer: "${d.customer||''}" → "${nv.customer}"`);
     if(nv.contactNo!==(d.contactNo||"")) addLog(d,`Contact No updated`);
@@ -636,11 +721,12 @@ function openDeal(id){
     if(p.stage.includes("100%") && confirm("Deal won! Push to Back Office for order processing?")){
       DB.orders.unshift({id:"O"+Date.now(),dsrNo:p.dsrNo,subDate:new Date().toISOString().slice(0,10),contact:p.customer,contactNo:p.contactNo||"",customer:p.company,pid:"",ord:"",sr:"NEW",cat:p.cat,product:p.product,contract:"12 Months",qty:p.qty,mrc:p.mrc,agent:p.agent,tl:p.tl,eAcctMgr:"Ankit",status:"Submitted",actDate:"",commission:Math.round(p.mrc*0.15),remarks:"From pipeline"});
       logByDsrNo(p.dsrNo,`Deal WON → sent to Back Office as new order`,"Back Office");
+      notify([...backOfficeNames(), p.agent], `🎉 Deal WON ${p.dsrNo} by ${p.agent} — new order ready in Back Office (${AED(p.mrc)}/mo)`, {dsrNo:p.dsrNo});
     }
     save(); render();
   },`<button class="btn-ghost" onclick="openHistoryByNo('${p.dsrNo}')">History</button><button class="btn-ghost" onclick="escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
 }
-function escalateDeal(id){ const p=DB.pipeline.find(x=>x.id===id); p.escalated=true; logByDsrNo(p.dsrNo,"Escalated to Sales Head (Amir Qadri)","Pipeline"); alert("Escalated to Sales Head (Amir Qadri) for support."); save(); closeModal(); render(); }
+function escalateDeal(id){ const p=DB.pipeline.find(x=>x.id===id); p.escalated=true; logByDsrNo(p.dsrNo,"Escalated to Sales Head (Amir Qadri)","Pipeline"); notify([salesHeadName(),...mgmtChain(p.agent).slice(0,2)], `⚑ Deal ${p.dsrNo} (${p.company}) escalated by ${SESSION.name}`, {dsrNo:p.dsrNo}); alert("Escalated to Sales Head (Amir Qadri) for support."); save(); closeModal(); render(); }
 function convertToPipeline(id){
   const d=DB.dsr.find(x=>x.id===id);
   addDealModal({company:d.company,customer:d.customer,contactNo:d.contactNo,remarks:d.remarks,dsrNo:d.dsrNo},id);
@@ -663,6 +749,7 @@ function addDealModal(prefill={},dsrId=null){
     const recNo=prefill.dsrNo||nextDsrNo();
     DB.pipeline.unshift({id:"P"+Date.now(),dsrNo:recNo,date:new Date().toISOString().slice(0,10),cp:"DIGI COO",customer:$("n_cu").value,contactNo:$("n_cn0").value,company:$("n_co").value,cat:sel.dataset.cat,product:sel.value,price,qty,mrc:qty*price,annual:qty*price*12,stage:$("n_st").value,agent,tl:myTL,escalated:false,remarks:$("n_re").value,fromDSR:!!dsrId});
     if(dsrId){ const d=DB.dsr.find(x=>x.id===dsrId); if(d){ d.converted=true; d.status="Interested"; addLog(d,`Converted to Pipeline · ${sel.value} ${qty}× = ${AED(qty*price)}/mo · stage ${$("n_st").value}`,"Pipeline"); } }
+    notify(mgmtChain(agent), `Lead ${recNo} converted to Pipeline by ${agent} — ${sel.value}, ${AED(qty*price)}/mo`, {dsrNo:recNo});
     save(); CURRENT="pipeline"; renderNav(); render();
   });
 }
@@ -698,7 +785,7 @@ function openOrder(id){
     const oldSt=o.status, oldPid=o.pid, oldAct=o.actDate;
     o.pid=$("o_pid").value;o.ord=$("o_ord").value;o.sr=$("o_sr").value;o.contract=$("o_con").value;
     o.status=$("o_st").value;o.actDate=$("o_act").value;o.remarks=$("o_re").value;
-    if(o.status!==oldSt) logByDsrNo(o.dsrNo,`Order status: ${oldSt} → ${o.status}`,"Back Office");
+    if(o.status!==oldSt){ logByDsrNo(o.dsrNo,`Order status: ${oldSt} → ${o.status}`,"Back Office"); notify([o.agent,...mgmtChain(o.agent).slice(0,1)], `Order ${o.dsrNo} (${o.customer}) status → ${o.status}`, {dsrNo:o.dsrNo}); }
     if(o.pid!==oldPid && o.pid) logByDsrNo(o.dsrNo,`PID assigned: ${o.pid}`,"Back Office");
     if(o.actDate!==oldAct && o.actDate) logByDsrNo(o.dsrNo,`Activated on ${o.actDate}`,"Back Office");
     save(); render();
