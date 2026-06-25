@@ -277,12 +277,12 @@ function seed(){
     const ag=agents[i%agents.length];
     const st=CALL_STATUS[i%CALL_STATUS.length];
     const d=new Date(2026,5,1+ (i%24));
-    dsr.push({id:"D"+(i+1),dsrNo:dno(),date:d.toISOString().slice(0,10),agent:ag,company:companies[i%companies.length]+" "+(i+1),building:["Abdul Razaq Ali","Bin Dasmal","Microbuilt","Advance Tech"][i%4],contactNo:"9715"+(20000000+i*131),customer:["Mr Ali","Anjlika","Usman","Eylan","Neha","Akbar"][i%6],status:st,remarks:remarks[i%remarks.length],connected:(st==="No answer"||st==="Voicemail")?"NO":"YES",history:[{ts:d.toLocaleDateString('en-GB')+" 09:00",user:ag,stage:"DSR",text:"DSR created · status set to "+st}]});
+    dsr.push({id:"D"+(i+1),dsrNo:dno(),date:d.toISOString().slice(0,10),agent:ag,tl:tlMap[ag],company:companies[i%companies.length]+" "+(i+1),building:["Abdul Razaq Ali","Bin Dasmal","Microbuilt","Advance Tech"][i%4],contactNo:"9715"+(20000000+i*131),customer:["Mr Ali","Anjlika","Usman","Eylan","Neha","Akbar"][i%6],status:st,remarks:remarks[i%remarks.length],connected:(st==="No answer"||st==="Voicemail")?"NO":"YES",history:[{ts:d.toLocaleDateString('en-GB')+" 09:00",user:ag,stage:"DSR",text:"DSR created · status set to "+st}]});
   }
   // Inject a few cross-agent duplicates (same company + number called later by another agent) to demonstrate the duplicate alert
   [[3,"Vani"],[10,"OB"],[18,"Samjith"],[25,"Hira"]].forEach(([idx,ag2],k)=>{
     const src=dsr[idx];
-    dsr.unshift({id:"DUP"+k,dsrNo:dno(),date:"2026-06-2"+(2+k),agent:ag2,company:src.company,building:src.building,contactNo:src.contactNo,customer:src.customer,status:"FollowUp",remarks:"Re-contacting same company",connected:"YES",history:[{ts:"2"+(2+k)+" Jun 2026 10:00",user:ag2,stage:"DSR",text:"DSR created · status set to FollowUp"}]});
+    dsr.unshift({id:"DUP"+k,dsrNo:dno(),date:"2026-06-2"+(2+k),agent:ag2,tl:tlMap[ag2],company:src.company,building:src.building,contactNo:src.contactNo,customer:src.customer,status:"FollowUp",remarks:"Re-contacting same company",connected:"YES",history:[{ts:"2"+(2+k)+" Jun 2026 10:00",user:ag2,stage:"DSR",text:"DSR created · status set to FollowUp"}]});
   });
   for(let i=0;i<22;i++){
     const ag=agents[i%agents.length];
@@ -321,7 +321,7 @@ function seed(){
   return {employees,dsr,pipeline,orders,invoices,notifications,products,threads,access,caps,counters:{dsr:seq}};
 }
 
-const DBKEY="digicoo_db_v7";
+const DBKEY="digicoo_db_v8";
 let DB = load();
 function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
@@ -490,15 +490,21 @@ function visibleAgents(){
   // sales_head, admin, backoffice, accountant, hr see all agents
   return DB.employees.filter(e=>e.role==="agent").map(e=>e.name);
 }
+/* ---------- Record-level privacy: a record is owned by the TL the agent
+   reported to WHEN it was created (rec.tl). Reassigning an agent does NOT
+   expose past records to the new TL. ---------- */
+function reportsUpTo(name,ancestor){ let cur=DB.employees.find(e=>e.name===name),g=0; while(cur&&cur.reportsTo&&g++<12){ if(cur.reportsTo===ancestor)return true; cur=DB.employees.find(e=>e.name===cur.reportsTo);} return false; }
+function myTLscope(){ const r=SESSION.role; if(r==="team_leader")return [SESSION.name]; if(r==="teams_head")return DB.employees.filter(e=>e.role==="team_leader"&&reportsUpTo(e.name,SESSION.name)).map(e=>e.name); return null; }
+function recVisible(rec){ if(!SESSION)return false; if(SESSION.role==="agent")return rec.agent===SESSION.name; const tls=myTLscope(); if(tls===null)return true; return tls.includes(rec.tl); }
 
 /* ============================================================
    DASHBOARD
    ============================================================ */
 function viewDash(){
   const ags=visibleAgents();
-  const dsr=DB.dsr.filter(d=>ags.includes(d.agent));
-  const pipe=DB.pipeline.filter(p=>ags.includes(p.agent));
-  const ord=DB.orders.filter(o=>ags.includes(o.agent));
+  const dsr=DB.dsr.filter(recVisible);
+  const pipe=DB.pipeline.filter(recVisible);
+  const ord=DB.orders.filter(recVisible);
   const calls=dsr.length, connected=dsr.filter(d=>d.connected==="YES").length;
   const connRate=calls?Math.round(connected/calls*100):0;
   const pipeVal=pipe.reduce((s,p)=>s+p.mrc,0);
@@ -522,7 +528,7 @@ function viewDash(){
   // agent leaderboard
   const board=ags.map(a=>{
     const t=DB.employees.find(e=>e.name===a)?.target||0;
-    const av=DB.orders.filter(o=>o.agent===a&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.mrc,0);
+    const av=ord.filter(o=>o.agent===a&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.mrc,0);
     return {a,t,av,pct:t?Math.round(av/t*100):0};
   }).sort((x,y)=>y.av-x.av);
   let lb=`<table><tr><th>Agent</th><th>Target</th><th>Activated</th><th>Ach %</th></tr>`+
@@ -532,13 +538,12 @@ function viewDash(){
     <div class="card"><h3>Pipeline by Stage</h3>${funnel}</div>
     <div class="card"><h3>Agent Performance (Activated MRC)</h3>${lb}</div>
   </div>
-  <div class="card"><h3>Quick AI Insight <span class="badge">AI</span></h3>${miniInsight(ags)}</div>`;
+  <div class="card"><h3>Quick AI Insight <span class="badge">AI</span></h3>${miniInsight(ord)}</div>`;
 }
 function kpi(label,val,color,sub){
   return `<div class="kpi"><div class="label">${label}</div><div class="val" style="color:${color}">${val}</div><div class="sub muted">${sub}</div></div>`;
 }
-function miniInsight(ags){
-  const ord=DB.orders.filter(o=>ags.includes(o.agent));
+function miniInsight(ord){
   const onHold=ord.filter(o=>o.status==="On Hold").length;
   const cancelled=ord.filter(o=>o.status==="Cancelled").length;
   const inproc=ord.filter(o=>o.status==="E& In-process"||o.status==="Submitted").length;
@@ -556,7 +561,7 @@ function miniInsight(ags){
 function viewDSR(){
   const ags=visibleAgents();
   const isAgent=SESSION.role==="agent";
-  const rows=DB.dsr.filter(d=>ags.includes(d.agent)).sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  const rows=DB.dsr.filter(recVisible).sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
   const today=new Date().toISOString().slice(0,10);
   // quick stats
   const total=rows.length, conn=rows.filter(d=>d.connected==="YES").length;
@@ -596,7 +601,8 @@ function addDSRModal(){
     <label>Remarks</label><textarea id="m_re" rows="3"></textarea>
   `,()=>{
     const st=$("m_st").value;
-    const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:SESSION.role==="agent"?SESSION.name:"Hira",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
+    const _ag=SESSION.role==="agent"?SESSION.name:"Hira";
+    const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:_ag,tl:(DB.employees.find(x=>x.name===_ag)||{}).tl||"-",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
     addLog(entry,"DSR created · status set to "+st);
     DB.dsr.unshift(entry);
     notify(mgmtChain(entry.agent).slice(0,2), `New DSR ${entry.dsrNo} by ${entry.agent}: ${entry.company||'—'} (${st})`, {dsrNo:entry.dsrNo});
@@ -697,7 +703,8 @@ XYZ Contracting, 97152xxxxxxx, Neha, Not interested, Using Du"></textarea>
     lines.forEach(line=>{
       const p=line.split(",").map(s=>s.trim()); if(!p[0])return;
       const st=CALL_STATUS.includes(p[3])?p[3]:"FollowUp";
-      const e={id:"D"+Date.now()+(n++),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:SESSION.role==="agent"?SESSION.name:"Hira",company:p[0],contactNo:p[1]||"",customer:p[2]||"",status:st,remarks:p[4]||"",connected:(st==="No answer"||st==="Voicemail")?"NO":"YES"};
+      const _ag=SESSION.role==="agent"?SESSION.name:"Hira";
+      const e={id:"D"+Date.now()+(n++),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:_ag,tl:(DB.employees.find(x=>x.name===_ag)||{}).tl||"-",company:p[0],contactNo:p[1]||"",customer:p[2]||"",status:st,remarks:p[4]||"",connected:(st==="No answer"||st==="Voicemail")?"NO":"YES"};
       addLog(e,"Imported from sheet · status "+st); DB.dsr.unshift(e);
     });
     save(); alert(n+" contacts imported into your DSR."); render();
@@ -708,8 +715,7 @@ XYZ Contracting, 97152xxxxxxx, Neha, Not interested, Using Du"></textarea>
    PIPELINE (kanban)
    ============================================================ */
 function viewPipeline(){
-  const ags=visibleAgents();
-  const pipe=[...DB.pipeline.filter(p=>ags.includes(p.agent))].sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  const pipe=[...DB.pipeline.filter(recVisible)].sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
   const pct=s=>{const m=String(s).match(/(\d+)%/);return m?+m[1]:0;};
   const open=pipe.filter(p=>!p.stage.includes("100%")&&!p.stage.includes("Lost"));
   const openMRC=open.reduce((a,p)=>a+p.mrc,0);
@@ -942,10 +948,10 @@ function attachCaseFile(dsrNo){
    MIS & TARGETS
    ============================================================ */
 function viewMIS(){
-  const ags=DB.employees.filter(e=>e.role==="agent").map(e=>e.name);
+  const ags=visibleAgents();
   const rows=ags.map(a=>{
-    const emp=DB.employees.find(e=>e.name===a);
-    const ord=DB.orders.filter(o=>o.agent===a);
+    const emp=DB.employees.find(e=>e.name===a)||{};
+    const ord=DB.orders.filter(o=>o.agent===a && recVisible(o));
     const sub=ord.reduce((s,o)=>s+o.mrc,0);
     const act=ord.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.mrc,0);
     const comm=ord.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.commission,0);
@@ -960,7 +966,7 @@ function viewMIS(){
   body+=`<tr class="fkeep" style="font-weight:800"><td>TOTAL</td><td></td><td>${AED(tot("tgt"))}</td><td>${AED(tot("sub"))}</td><td>${AED(tot("act"))}</td><td>${tot("tgt")?Math.round(tot("act")/tot("tgt")*100):0}%</td><td>${AED(tot("hold"))}</td><td>${AED(tot("comm"))}</td></tr>`;
 
   // status breakdown
-  const sb=ORDER_STATUS.map(s=>{const v=DB.orders.filter(o=>o.status===s).reduce((a,o)=>a+o.mrc,0);const n=DB.orders.filter(o=>o.status===s).length;return `<tr><td>${tag(s)}</td><td>${n}</td><td>${AED(v)}</td></tr>`}).join("");
+  const sb=ORDER_STATUS.map(s=>{const lst=DB.orders.filter(o=>o.status===s && recVisible(o));return `<tr><td>${tag(s)}</td><td>${lst.length}</td><td>${AED(lst.reduce((a,o)=>a+o.mrc,0))}</td></tr>`}).join("");
 
   const misCols=["Agent","TL","Target","Submitted","Activated","Ach%","Pending MRC","Commission"];
   return `<div class="card"><h3>Sales MIS — Target vs Submission vs Activation</h3>
@@ -971,12 +977,13 @@ function viewMIS(){
     </div>`;
 }
 function tlRollup(){
-  const tls=[...new Set(DB.employees.filter(e=>e.role==="agent").map(e=>e.tl))];
-  return `<table><tr><th>Team Leader</th><th>Agents</th><th>Activated MRC</th><th>Commission</th></tr>`+
+  const ord=DB.orders.filter(o=>(o.status==="Activated"||o.status==="Closed") && recVisible(o));
+  const tls=[...new Set(ord.map(o=>o.tl).filter(Boolean))];
+  return `<table><tr><th>Team Leader (owner)</th><th>Agents</th><th>Activated MRC</th><th>Commission</th></tr>`+
     tls.map(tl=>{
-      const team=DB.employees.filter(e=>e.tl===tl).map(e=>e.name);
-      const ord=DB.orders.filter(o=>team.includes(o.agent)&&(o.status==="Activated"||o.status==="Closed"));
-      return `<tr><td>${tl}</td><td>${team.length}</td><td>${AED(ord.reduce((s,o)=>s+o.mrc,0))}</td><td style="color:var(--green)">${AED(ord.reduce((s,o)=>s+o.commission,0))}</td></tr>`;
+      const t=ord.filter(o=>o.tl===tl);
+      const agents=[...new Set(t.map(o=>o.agent))].length;
+      return `<tr><td>${tl}</td><td>${agents}</td><td>${AED(t.reduce((s,o)=>s+o.mrc,0))}</td><td style="color:var(--green)">${AED(t.reduce((s,o)=>s+o.commission,0))}</td></tr>`;
     }).join("")+`</table>`;
 }
 
@@ -996,9 +1003,35 @@ function viewHR(){
       ${kpi("Departments",[...new Set(DB.employees.map(e=>e.dept))].length,"var(--purple)","")}
       ${kpi("Avg Tenure","~7 mo","var(--green)","Demo")}
     </div>
+    ${assignCard()}
     <div class="toolbar">${can("manage_users")?'<button class="btn-primary" onclick="addEmpModal()">+ Add Employee / User</button>':'<span class="muted">View only — ask Admin to grant \'Create user accounts\'</span>'}<span class="muted">Employee master · designations & reporting lines</span></div>
     ${(()=>{const cols=["ID","Name","Designation","System Role","Dept","Reports To","Join Date","Salary",null];
       return `<div class="scroll"><table id="hTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}`;
+}
+function assignCard(){
+  const edit=can("manage_users");
+  const tls=DB.employees.filter(e=>e.role==="team_leader");
+  const agents=DB.employees.filter(e=>e.role==="agent");
+  const rows=agents.map(a=>{
+    const cur=(a.tl&&a.tl!=="-")?a.tl:'<span class="muted">Unassigned</span>';
+    const sel=edit?`<select onchange="reassignAgent('${a.id}',this.value)">
+        <option value="">— reassign… —</option>
+        ${tls.filter(t=>t.name!==a.tl).map(t=>`<option value="${t.name}">→ ${t.name}</option>`).join("")}
+        ${a.tl&&a.tl!=="-"?'<option value="-">→ Unassign</option>':''}
+      </select>`:'<span class="muted">—</span>';
+    return `<tr><td>${a.name}</td><td>${cur}</td><td>${sel}</td></tr>`;
+  }).join("");
+  return `<div class="card"><h3>Agent → Team Leader Assignment ${edit?'<span class="badge">EDITABLE</span>':''}</h3>
+    <div class="flag warn" style="margin-top:0">Privacy: when an agent is reassigned, the new Team Leader sees only records created <b>from that point on</b>. Past records stay private to the previous Team Leader.</div>
+    <table><tr><th>Agent</th><th>Current Team Leader</th><th>${edit?'Reassign':''}</th></tr>${rows}</table></div>`;
+}
+function reassignAgent(empId,newTL){
+  if(!newTL) return;
+  const e=DB.employees.find(x=>x.id===empId); if(!e)return;
+  const old=e.tl;
+  e.tl=newTL; e.reportsTo=(newTL==="-")?"-":newTL;
+  save(); render();
+  alert(`${e.name} reassigned: ${old&&old!=="-"?old:"Unassigned"} → ${newTL==="-"?"Unassigned":newTL}.\n\nThe new Team Leader will only see ${e.name}'s NEW records. Past records remain with ${old&&old!=="-"?old:"the previous owner"}.`);
 }
 function openEmp(id){
   const e=DB.employees.find(x=>x.id===id);
@@ -1113,9 +1146,9 @@ function viewAI(){
 }
 function aiReport(period){
   const ags=visibleAgents();
-  const dsr=DB.dsr.filter(d=>ags.includes(d.agent));
-  const ord=DB.orders.filter(o=>ags.includes(o.agent));
-  const pipe=DB.pipeline.filter(p=>ags.includes(p.agent));
+  const dsr=DB.dsr.filter(recVisible);
+  const ord=DB.orders.filter(recVisible);
+  const pipe=DB.pipeline.filter(recVisible);
   const calls=dsr.length, conn=dsr.filter(d=>d.connected==="YES").length;
   const connRate=calls?Math.round(conn/calls*100):0;
   const act=ord.filter(o=>o.status==="Activated"||o.status==="Closed");
