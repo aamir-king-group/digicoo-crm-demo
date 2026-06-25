@@ -120,6 +120,23 @@ input.colf::placeholder{color:#5c6c8c}
 .toast{background:var(--panel);border:1px solid var(--brand2);border-left:4px solid var(--brand2);border-radius:10px;padding:12px 14px;width:330px;box-shadow:0 12px 30px rgba(0,0,0,.5);font-size:13px;animation:slidein .25s ease;transition:opacity .4s}
 .toast b{color:var(--brand2)}
 @keyframes slidein{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.drawerback{position:fixed;inset:0;background:rgba(5,8,15,.45);z-index:69}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:440px;max-width:94vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:-14px 0 44px rgba(0,0,0,.55);z-index:70;display:flex;flex-direction:column;animation:slideright .22s ease}
+@keyframes slideright{from{transform:translateX(100%)}to{transform:none}}
+.drawer .dhead{padding:14px 16px;border-bottom:1px solid var(--line)}
+.drawer .dbody{flex:1;overflow:auto;padding:12px 14px}
+.drawer .dfoot{padding:12px 14px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.drawer .dfoot input{flex:1}
+.cmsg{margin:8px 0;text-align:left}
+.cmsg-me{margin:8px 0;text-align:right}
+.cmsg .bub,.cmsg-me .bub{display:inline-block;max-width:88%;padding:8px 11px;border-radius:12px;font-size:13px}
+.cmsg .bub{background:var(--panel2);border:1px solid var(--line);border-radius:12px 12px 12px 4px}
+.cmsg-me .bub{background:var(--brand);color:#fff;border-radius:12px 12px 4px 12px;text-align:left}
+.csys{text-align:center;margin:10px 0}
+.cfile{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--txt);cursor:pointer}
+.chip:hover{border-color:var(--brand2);color:var(--brand2)}
+.mention{color:var(--brand2);font-weight:700}
 </style>
 </head>
 <body>
@@ -162,6 +179,7 @@ input.colf::placeholder{color:#5c6c8c}
 <div id="modalHost"></div>
 <div id="menuHost"></div>
 <div id="toastHost" class="toastwrap"></div>
+<div id="caseHost"></div>
 
 <script>
 /* ============================================================
@@ -171,7 +189,7 @@ input.colf::placeholder{color:#5c6c8c}
 
 const PIPE_STAGES = ["10%- Prospect","30% - Value Prop","50% - Negotiation","70% - Finalizing","90% - Closing","100% - Deal Won","0% - Lost"];
 const CALL_STATUS = ["Interested","FollowUp","Not interested","Using etisalat","Using DU","Voicemail","No answer","Number not in use"];
-const ORDER_STATUS = ["Submitted","E& In-process","BO Pending","Activated","Closed","On Hold","Cancelled","Returned"];
+const ORDER_STATUS = ["In Pipeline","Submitted","E& In-process","BO Pending","Waiting for Agent","Activated","Closed","On Hold","Cancelled","Returned"];
 const PRODUCTS = [
   {id:"PR1", cat:"GSM (Mobile)", title:"Business First Plus", mrc:200},
   {id:"PR2", cat:"GSM (Mobile)", title:"Business Extreme", mrc:600},
@@ -276,7 +294,7 @@ function seed(){
     const qty=1+(i%8); const price=[100,200,300,395,600][i%5]; const mrc=qty*price;
     const st=ORDER_STATUS[i%ORDER_STATUS.length];
     const sub=new Date(2026,4+(i%2),2+(i%26));
-    orders.push({id:"O"+(ono++),dsrNo:dno(),subDate:sub.toISOString().slice(0,10),contact:["Amer","MD Armanul","Qasim","Ali","Neha"][i%5],contactNo:"58"+(2000000+i),customer:companies[i%companies.length]+" "+(i+1),pid:"535"+(50000+i),ord:"ORD-44"+(70000+i)+"-X"+i,sr:i%2?"NEW":"MNP",cat:pr.cat,product:pr.title,contract:"12 Months",qty:qty,mrc:mrc,agent:ag,tl:tlMap[ag],eAcctMgr:"Ankit",status:st,actDate:(st==="Activated"||st==="Closed")?new Date(2026,5,3+i%25).toISOString().slice(0,10):"",commission:Math.round(mrc*0.15),remarks:st==="On Hold"?"Awaiting documents":st==="Cancelled"?"Customer withdrew":""});
+    orders.push({id:"O"+(ono++),dsrNo:dno(),subDate:sub.toISOString().slice(0,10),contact:["Amer","MD Armanul","Qasim","Ali","Neha"][i%5],contactNo:"58"+(2000000+i),customer:companies[i%companies.length]+" "+(i+1),pid:"535"+(50000+i),ord:"ORD-44"+(70000+i)+"-X"+i,eOrderNo:(st==="Activated"||st==="Closed"||st==="E& In-process")?"EAND-"+(900000+i):"",sr:i%2?"NEW":"MNP",cat:pr.cat,product:pr.title,contract:"12 Months",qty:qty,mrc:mrc,agent:ag,tl:tlMap[ag],eAcctMgr:"Ankit",status:st,actDate:(st==="Activated"||st==="Closed")?new Date(2026,5,3+i%25).toISOString().slice(0,10):"",commission:Math.round(mrc*0.15),remarks:st==="On Hold"?"Awaiting documents":st==="Cancelled"?"Customer withdrew":""});
   }
   const invoices=[
     {id:"INV-2601",date:"2026-04-30",party:"e& (Etisalat)",type:"Commission Income",net:48500,vat:2425,total:50925,status:"Paid"},
@@ -293,12 +311,17 @@ function seed(){
     {id:"N3",ts:"23 Jun 2026 16:00",to:["Amir Qadri","Sana"],text:"Deal DSR-00007 escalated by Hira",read:true}
   ];
   const products=JSON.parse(JSON.stringify(PRODUCTS));
-  return {employees,dsr,pipeline,orders,invoices,notifications,products,access,caps,counters:{dsr:seq}};
+  const threads={"DSR-00091":[
+    {ts:"24 Jun 2026 10:05",user:"Vani",role:"agent",type:"msg",text:"Customer asked for a revised quote with 5 SIM cards."},
+    {ts:"24 Jun 2026 10:20",user:"Ansari",role:"backoffice",type:"msg",text:"Noted — please share the trade license to proceed."},
+    {ts:"24 Jun 2026 10:22",user:"Vani",role:"agent",type:"file",file:"trade-license.pdf",text:""}
+  ]};
+  return {employees,dsr,pipeline,orders,invoices,notifications,products,threads,access,caps,counters:{dsr:seq}};
 }
 
 const DBKEY="digicoo_db_v7";
 let DB = load();
-function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
 // Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
 function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
@@ -317,7 +340,7 @@ let CURRENT="dash";
    Cross-tab real-time via BroadcastChannel (+ storage fallback).
    In production this layer is replaced by server push (WebSocket).
    ============================================================ */
-var BC=null, toastedIds=new Set();
+var BC=null, toastedIds=new Set(), CASE_OPEN=null;
 try{ BC=new BroadcastChannel("digicoo_crm_"+DBKEY); BC.onmessage=onRemoteChange; }catch(e){}
 try{ window.addEventListener("storage",e=>{ if(e.key===DBKEY) onRemoteChange(); }); }catch(e){}
 function onRemoteChange(){
@@ -326,6 +349,7 @@ function onRemoteChange(){
   renderBell();
   myNotifs().filter(n=>!n.read && !toastedIds.has(n.id)).forEach(n=>{ toastedIds.add(n.id); toast(n.text); });
   render(); // live-refresh dashboard / current view
+  if(CASE_OPEN) openCase(CASE_OPEN); // live-refresh open case chat
 }
 function empBy(name){ return DB.employees.find(e=>e.name===name); }
 function mgmtChain(agentName){
@@ -378,7 +402,7 @@ const AED=n=>"AED "+Math.round(n||0).toLocaleString();
 const $=id=>document.getElementById(id);
 function statusColor(s){
   if(/Interested|Activated|Closed|100%|Deal Won|Paid/i.test(s)) return "var(--green)";
-  if(/FollowUp|Negotiation|Finalizing|Closing|In-process|Submitted|Outstanding|Pending|Prospect|Value/i.test(s)) return "var(--amber)";
+  if(/FollowUp|Negotiation|Finalizing|Closing|In-process|Submitted|Outstanding|Pending|Prospect|Value|Waiting|In Pipeline/i.test(s)) return "var(--amber)";
   if(/Not interested|Lost|Cancelled|Returned|No answer|not in use/i.test(s)) return "var(--brand2)";
   if(/Hold/i.test(s)) return "var(--purple)";
   return "var(--blue)";
@@ -627,6 +651,7 @@ function rowMenu(id,ev){
   items.push(d.converted
     ? `<div class="mi disabled">✓ Already in Pipeline</div>`
     : `<button class="mi" onclick="closeMenu();convertToPipeline('${id}')">→ Convert to Pipeline</button>`);
+  if(d.converted) items.push(`<button class="mi" onclick="closeMenu();openCase('${d.dsrNo}')">💬 Open Case (chat &amp; docs)</button>`);
   items.push(`<button class="mi" onclick="closeMenu();openHistory('${id}')">History (${(d.history||[]).length})</button>`);
   if(priorContact(d)) items.push(`<button class="mi" onclick="closeMenu();dupInfo('${id}')">⚠ View earlier contact</button>`);
   const x=Math.min(ev.clientX, window.innerWidth-210), y=Math.min(ev.clientY, window.innerHeight-160);
@@ -684,7 +709,7 @@ function viewPipeline(){
     <td><b style="color:var(--brand2)">${p.dsrNo||"-"}</b></td><td>${p.date}</td><td>${p.company}</td><td>${p.customer||"-"}</td>
     <td>${p.product}<br><small class="muted">${p.cat}</small></td><td>${p.qty}</td><td>${AED(p.mrc)}</td><td class="muted">${AED(p.annual)}</td>
     <td>${tag(p.stage)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
-    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
+    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openCase('${p.dsrNo}')" title="Case chat &amp; documents">💬</button><button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
   return `<div class="kpis">
       ${kpi("Open Deals",open.length,"var(--blue)",AED(openMRC)+" MRC")}
       ${kpi("Weighted Pipeline",AED(weighted),"var(--purple)","Stage-adjusted forecast")}
@@ -700,7 +725,8 @@ function viewPipeline(){
 function rowMenuPipe(id,ev){
   ev.stopPropagation();
   const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
-  const items=[`<button class="mi" onclick="closeMenu();openHistoryByNo('${p.dsrNo}')">History</button>`];
+  const items=[`<button class="mi" onclick="closeMenu();openCase('${p.dsrNo}')">💬 Open Case (chat &amp; docs)</button>`,
+    `<button class="mi" onclick="closeMenu();openHistoryByNo('${p.dsrNo}')">History</button>`];
   if(!p.stage.includes("100%")&&!p.stage.includes("Lost")) items.push(`<button class="mi" onclick="closeMenu();escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
   const x=Math.min(ev.clientX,window.innerWidth-210), y=Math.min(ev.clientY,window.innerHeight-160);
   $("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div><div class="menucard" style="left:${x}px;top:${y}px">${items.join("")}</div>`;
@@ -720,10 +746,12 @@ function openDeal(id){
     p.customer=$("d_cu").value;p.product=$("d_pr").value;p.cat=$("d_pr").selectedOptions[0].dataset.cat||p.cat;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
     p.mrc=p.qty*p.price;p.annual=p.mrc*12;p.stage=$("d_st").value;p.remarks=$("d_re").value;
     if(p.stage!==oldStage) logByDsrNo(p.dsrNo,`Pipeline stage: ${oldStage} → ${p.stage}`,"Pipeline");
-    if(p.stage.includes("100%") && confirm("Deal won! Push to Back Office for order processing?")){
-      DB.orders.unshift({id:"O"+Date.now(),dsrNo:p.dsrNo,subDate:new Date().toISOString().slice(0,10),contact:p.customer,contactNo:p.contactNo||"",customer:p.company,pid:"",ord:"",sr:"NEW",cat:p.cat,product:p.product,contract:"12 Months",qty:p.qty,mrc:p.mrc,agent:p.agent,tl:p.tl,eAcctMgr:"Ankit",status:"Submitted",actDate:"",commission:Math.round(p.mrc*0.15),remarks:"From pipeline"});
-      logByDsrNo(p.dsrNo,`Deal WON → sent to Back Office as new order`,"Back Office");
-      notify([...backOfficeNames(), p.agent], `🎉 Deal WON ${p.dsrNo} by ${p.agent} — new order ready in Back Office (${AED(p.mrc)}/mo)`, {dsrNo:p.dsrNo});
+    if(p.stage.includes("100%") && confirm("Deal won! Send to Back Office for processing?")){
+      let o=DB.orders.find(x=>x.dsrNo===p.dsrNo);
+      if(o){ o.status="Submitted"; o.qty=p.qty; o.mrc=p.mrc; o.product=p.product; o.cat=p.cat; o.commission=Math.round(p.mrc*0.15); o.remarks="Deal won — ready to process"; }
+      else { DB.orders.unshift({id:"O"+Date.now(),dsrNo:p.dsrNo,subDate:new Date().toISOString().slice(0,10),contact:p.customer,contactNo:p.contactNo||"",customer:p.company,pid:"",ord:"",sr:"NEW",cat:p.cat,product:p.product,contract:"12 Months",qty:p.qty,mrc:p.mrc,agent:p.agent,tl:p.tl,eAcctMgr:"Ankit",status:"Submitted",actDate:"",commission:Math.round(p.mrc*0.15),remarks:"From pipeline"}); }
+      logByDsrNo(p.dsrNo,`Deal WON → Back Office processing (Submitted)`,"Back Office");
+      notify([...backOfficeNames(), p.agent], `🎉 Deal WON ${p.dsrNo} by ${p.agent} — ready to process in Back Office (${AED(p.mrc)}/mo)`, {dsrNo:p.dsrNo});
     }
     save(); render();
   },`<button class="btn-ghost" onclick="openHistoryByNo('${p.dsrNo}')">History</button><button class="btn-ghost" onclick="escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
@@ -752,6 +780,12 @@ function addDealModal(prefill={},dsrId=null){
     DB.pipeline.unshift({id:"P"+Date.now(),dsrNo:recNo,date:new Date().toISOString().slice(0,10),cp:"DIGI COO",customer:$("n_cu").value,contactNo:$("n_cn0").value,company:$("n_co").value,cat:sel.dataset.cat,product:sel.value,price,qty,mrc:qty*price,annual:qty*price*12,stage:$("n_st").value,agent,tl:myTL,escalated:false,remarks:$("n_re").value,fromDSR:!!dsrId});
     if(dsrId){ const d=DB.dsr.find(x=>x.id===dsrId); if(d){ d.converted=true; d.status="Interested"; addLog(d,`Converted to Pipeline · ${sel.value} ${qty}× = ${AED(qty*price)}/mo · stage ${$("n_st").value}`,"Pipeline"); } }
     notify(mgmtChain(agent), `Lead ${recNo} converted to Pipeline by ${agent} — ${sel.value}, ${AED(qty*price)}/mo`, {dsrNo:recNo});
+    // Link to Back Office immediately so processing can begin (status: In Pipeline)
+    if(!DB.orders.some(o=>o.dsrNo===recNo)){
+      DB.orders.unshift({id:"O"+Date.now()+Math.floor(Math.random()*1000),dsrNo:recNo,subDate:new Date().toISOString().slice(0,10),contact:$("n_cu").value,contactNo:$("n_cn0").value,customer:$("n_co").value,pid:"",ord:"",sr:"NEW",cat:sel.dataset.cat,product:sel.value,contract:"12 Months",qty,mrc:qty*price,agent,tl:myTL,eAcctMgr:"Ankit",status:"In Pipeline",actDate:"",commission:Math.round(qty*price*0.15),remarks:"Linked from pipeline"});
+      logByDsrNo(recNo,`Linked to Back Office (status: In Pipeline)`,"Back Office");
+      notify(backOfficeNames(), `New pipeline case ${recNo} (${$("n_co").value||'—'}) linked to Back Office — by ${agent}`, {dsrNo:recNo});
+    }
     save(); CURRENT="pipeline"; renderNav(); render();
   });
   setTimeout(()=>prodPick('n'),30); // fill category + default MRC for first product
@@ -770,10 +804,11 @@ function viewBackoffice(){
   let body=rows.map(o=>`<tr>
     <td><b style="color:var(--brand2)">${o.dsrNo||"-"}</b></td><td>${o.subDate}</td><td>${o.customer}</td><td>${o.product}</td><td>${o.qty}</td>
     <td>${AED(o.mrc)}</td><td>${o.agent}</td><td>${o.pid||'<span class="muted">—</span>'}</td>
+    <td>${o.eOrderNo?`<b style="color:var(--amber)">${o.eOrderNo}</b>`:'<span class="muted">—</span>'}</td>
     <td>${tag(o.status)}</td><td>${o.actDate||'<span class="muted">—</span>'}</td>
-    <td><button class="btn-ghost" onclick="openOrder('${o.id}')">Process</button></td></tr>`).join("");
+    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openCase('${o.dsrNo}')" title="Case chat &amp; documents">💬</button><button class="btn-ghost" onclick="openOrder('${o.id}')">Process</button></td></tr>`).join("");
   const counts=ORDER_STATUS.map(s=>`${s}: ${rows.filter(o=>o.status===s).length}`).join(" · ");
-  const cols=["DSR No","Sub Date","Customer","Product","Qty","MRC","Agent","PID","Status","Activated",null];
+  const cols=["DSR No","Sub Date","Customer","Product","Qty","MRC","Agent","PID","e& Order No","Status","Activated",null];
   return `<div class="toolbar"><span class="muted">${rows.length} orders · search any column below</span></div>
     <p class="muted" style="font-size:12px;margin:0 0 10px">${counts}</p>
     <div class="scroll"><table id="oTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;
@@ -783,6 +818,7 @@ function openOrder(id){
   openModal(`Order — ${o.customer}`,`
     <div class="flag warn" style="margin-top:0">DSR Ref <b>${o.dsrNo||'-'}</b> · traced from the original agent call</div>
     <div class="row"><div><label>PID</label><input id="o_pid" value="${o.pid||''}"></div><div><label>Order No</label><input id="o_ord" value="${o.ord||''}"></div></div>
+    <label>e&amp; Order Number <span class="muted">(for tracking in the e&amp; system)</span></label><input id="o_eord" value="${o.eOrderNo||''}" placeholder="e.g. EAND-900123">
     <div class="row"><div><label>SR Type</label><select id="o_sr"><option ${o.sr==='NEW'?'selected':''}>NEW</option><option ${o.sr==='MNP'?'selected':''}>MNP</option></select></div><div><label>Contract</label><input id="o_con" value="${o.contract}"></div></div>
     <label>Status</label><select id="o_st">${ORDER_STATUS.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join("")}</select>
     <label>Activation Date</label><input id="o_act" type="date" value="${o.actDate||''}">
@@ -790,14 +826,89 @@ function openOrder(id){
     <div class="flag warn" style="margin-top:12px">Processed with e& · Account Manager: <b>${o.eAcctMgr||'Ankit'}</b> · e& Director: <b>Khalifa</b> <span class="muted">(external — reference only)</span></div>
     <div class="flag good">Commission (15% of MRC): <b>${AED(o.commission)}</b></div>
   `,()=>{
-    const oldSt=o.status, oldPid=o.pid, oldAct=o.actDate;
-    o.pid=$("o_pid").value;o.ord=$("o_ord").value;o.sr=$("o_sr").value;o.contract=$("o_con").value;
+    const oldSt=o.status, oldPid=o.pid, oldAct=o.actDate, oldEord=o.eOrderNo;
+    o.pid=$("o_pid").value;o.ord=$("o_ord").value;o.eOrderNo=$("o_eord").value;o.sr=$("o_sr").value;o.contract=$("o_con").value;
     o.status=$("o_st").value;o.actDate=$("o_act").value;o.remarks=$("o_re").value;
     if(o.status!==oldSt){ logByDsrNo(o.dsrNo,`Order status: ${oldSt} → ${o.status}`,"Back Office"); notify([o.agent,...mgmtChain(o.agent).slice(0,1)], `Order ${o.dsrNo} (${o.customer}) status → ${o.status}`, {dsrNo:o.dsrNo}); }
     if(o.pid!==oldPid && o.pid) logByDsrNo(o.dsrNo,`PID assigned: ${o.pid}`,"Back Office");
+    if(o.eOrderNo!==oldEord && o.eOrderNo) logByDsrNo(o.dsrNo,`e& Order Number set: ${o.eOrderNo}`,"Back Office");
     if(o.actDate!==oldAct && o.actDate) logByDsrNo(o.dsrNo,`Activated on ${o.actDate}`,"Back Office");
     save(); render();
-  },`<button class="btn-ghost" onclick="openHistoryByNo('${o.dsrNo}')">History</button>`);
+  },`<button class="btn-ghost" onclick="closeModal();openCase('${o.dsrNo}')">💬 Case</button><button class="btn-ghost" onclick="waitAgent('${o.id}')">⏳ Waiting for Agent</button><button class="btn-ghost" onclick="openHistoryByNo('${o.dsrNo}')">History</button>`);
+}
+function waitAgent(id){
+  const o=DB.orders.find(x=>x.id===id); if(!o)return;
+  o.status="Waiting for Agent"; o.remarks=(o.remarks?o.remarks+" · ":"")+"Awaiting update from agent";
+  logByDsrNo(o.dsrNo,`Back Office set status: Waiting for update from agent (${o.agent})`,"Back Office");
+  notify([o.agent,...mgmtChain(o.agent).slice(0,1)], `⏳ Back Office is waiting for your update on ${o.dsrNo} (${o.customer})`, {dsrNo:o.dsrNo});
+  save(); closeModal(); render();
+}
+
+/* ============================================================
+   CASE PANEL — shared chat, documents, comments & timeline
+   ============================================================ */
+function threadFor(dsrNo){
+  const d=DB.dsr.find(x=>x.dsrNo===dsrNo);
+  const sys=(d&&d.history?d.history:[]).map(h=>({ts:h.ts,user:h.user,role:"system",stage:h.stage,type:"sys",text:h.text}));
+  const human=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo]:[];
+  return sys.concat(human);
+}
+function caseContext(dsrNo){
+  const o=DB.orders.find(x=>x.dsrNo===dsrNo),p=DB.pipeline.find(x=>x.dsrNo===dsrNo),d=DB.dsr.find(x=>x.dsrNo===dsrNo);
+  return {company:(o&&o.customer)||(p&&p.company)||(d&&d.company)||"",
+          status:(o&&o.status)||(p&&p.stage)||(d&&d.status)||"",
+          agent:(p&&p.agent)||(o&&o.agent)||(d&&d.agent)||""};
+}
+function caseStakeholders(dsrNo){ const c=caseContext(dsrNo); return [...new Set([c.agent,...mgmtChain(c.agent),...backOfficeNames()])].filter(Boolean); }
+const _esc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function parseMentions(text){ return DB.employees.filter(e=>new RegExp("@"+_esc(e.name)+"(?![A-Za-z])","i").test(text)).map(e=>e.name); }
+function highlightMentions(t){ let s=t; DB.employees.forEach(e=>{ s=s.replace(new RegExp("@"+_esc(e.name)+"(?![A-Za-z])","gi"), m=>`<span class="mention">${m}</span>`); }); return s; }
+function tagInsert(name){ const el=document.getElementById("cmsg"); if(!el)return; el.value=(el.value?el.value.replace(/\s*$/,"")+" ":"")+"@"+name+" "; el.focus(); }
+function openCase(dsrNo){
+  closeMenu(); CASE_OPEN=dsrNo;
+  const t=threadFor(dsrNo), ctx=caseContext(dsrNo), me=SESSION&&SESSION.name;
+  const rn=r=>ROLES[r]?ROLES[r].name:r;
+  const chips=caseStakeholders(dsrNo).filter(n=>n!==me).map(n=>`<button class="chip" onclick="tagInsert('${n}')">@${n}</button>`).join("");
+  const items=t.map(x=>{
+    if(x.type==="sys") return `<div class="csys"><span class="tag" style="background:#3b82f622;color:var(--muted)">${x.stage||"Update"} · ${x.text}</span><div><small class="muted">${x.ts}</small></div></div>`;
+    const mine=x.user===me;
+    if(x.type==="file") return `<div class="${mine?'cmsg-me':'cmsg'}"><span class="cfile">📎 <b>${x.file}</b>${x.text?' · '+x.text:''}<div><small class="muted">${x.user} · ${rn(x.role)} · ${x.ts}</small></div></span></div>`;
+    return `<div class="${mine?'cmsg-me':'cmsg'}"><span class="bub"><div style="font-size:11px;opacity:.85;margin-bottom:2px"><b>${x.user}</b> · ${rn(x.role)}</div>${highlightMentions(x.text)}<div><small style="opacity:.7">${x.ts}</small></div></span></div>`;
+  }).join("");
+  document.getElementById("caseHost").innerHTML=`<div class="drawerback" onclick="closeCase()"></div>
+    <div class="drawer">
+      <div class="dhead">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--brand2)">${dsrNo}</b><button class="btn-ghost" style="padding:4px 10px" onclick="closeCase()">✕</button></div>
+        <div style="margin-top:4px">${ctx.company} ${ctx.status?`<span class="tag" style="background:${statusColor(ctx.status)}22;color:${statusColor(ctx.status)}">${ctx.status}</span>`:''}</div>
+        <small class="muted">Shared case thread · Agent, Back Office, TL, Teams Head &amp; Sales Head</small>
+      </div>
+      <div class="dbody" id="caseBody">${items||'<p class="muted">No activity yet. Start the conversation below.</p>'}</div>
+      <div style="padding:8px 14px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><small class="muted">Tag:</small>${chips}</div>
+      <div class="dfoot">
+        <input id="cmsg" placeholder="Message… use @name to tag" onkeydown="if(event.key==='Enter')sendCaseMsg('${dsrNo}')">
+        <button class="btn-ghost" onclick="attachCaseFile('${dsrNo}')" title="Attach document">📎</button>
+        <button class="btn-primary" onclick="sendCaseMsg('${dsrNo}')">Send</button>
+      </div>
+    </div>`;
+  const b=document.getElementById("caseBody"); if(b) b.scrollTop=b.scrollHeight;
+}
+function closeCase(){ CASE_OPEN=null; document.getElementById("caseHost").innerHTML=""; }
+function sendCaseMsg(dsrNo){
+  const el=document.getElementById("cmsg"); const v=((el&&el.value)||"").trim(); if(!v)return;
+  const mentioned=parseMentions(v);
+  DB.threads=DB.threads||{}; (DB.threads[dsrNo]=DB.threads[dsrNo]||[]).push({ts:nowTs(),user:SESSION.name,role:SESSION.role,type:"msg",text:v,mentions:mentioned});
+  const recips=[...new Set([...caseStakeholders(dsrNo),...mentioned])].filter(n=>n!==SESSION.name);
+  recips.forEach(r=>{
+    const tagged=mentioned.includes(r);
+    notify([r], `${tagged?'🔔 '+SESSION.name+' tagged you':'💬 '+SESSION.name} on ${dsrNo}: ${v.slice(0,60)}`, {dsrNo});
+  });
+  save(); openCase(dsrNo); renderBell();
+}
+function attachCaseFile(dsrNo){
+  const name=prompt("File name to attach (demo):","document.pdf"); if(!name)return;
+  DB.threads=DB.threads||{}; (DB.threads[dsrNo]=DB.threads[dsrNo]||[]).push({ts:nowTs(),user:SESSION.name,role:SESSION.role,type:"file",file:name,text:""});
+  notify(caseStakeholders(dsrNo).filter(n=>n!==SESSION.name), `📎 ${SESSION.name} attached ${name} to ${dsrNo}`, {dsrNo});
+  save(); openCase(dsrNo);
 }
 
 /* ============================================================
