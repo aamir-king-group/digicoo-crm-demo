@@ -528,6 +528,7 @@ function viewDSR(){
   let body=rows.slice(0,500).map(d=>`<tr>
     <td><b style="color:var(--brand2)">${d.dsrNo||"-"}</b></td><td>${d.date}</td>${isAgent?'':`<td>${d.agent}</td>`}<td>${d.company}</td><td class="muted">${d.contactNo||"-"}</td>
     <td>${d.customer||"-"}</td><td>${tag(d.status)}</td>
+    <td>${d.converted?'<span class="tag" style="background:var(--green)22;color:var(--green)">✓ In Pipeline</span>':'<span class="muted">—</span>'}</td>
     <td>${d.connected==="YES"?'<span style="color:var(--green)">●</span>':'<span class="muted">○</span>'}</td>
     <td class="muted">${d.remarks||""}</td>
     <td style="white-space:nowrap">${(()=>{const p=priorContact(d);return p?`<span class="dupwarn" title="Already called by ${p.by} on ${p.date} (${p.no})" onclick="dupInfo('${d.id}')">⚠ Dup</span>`:'';})()}
@@ -545,7 +546,7 @@ function viewDSR(){
       ${canAdd?'<button class="btn-ghost" onclick="importDSRModal()">⤓ Import list (Google Sheet / CSV)</button>':''}
       <span class="muted">Daily Sales Report — search any column below · agents build their list, call, and update status here</span>
     </div>
-    ${(()=>{const cols=isAgent?["DSR No","Date","Company","Contact","Customer","Status","Conn.","Remarks",null]:["DSR No","Date","Agent","Company","Contact","Customer","Status","Conn.","Remarks",null];
+    ${(()=>{const cols=isAgent?["DSR No","Date","Company","Contact","Customer","Status","Pipeline","Conn.","Remarks",null]:["DSR No","Date","Agent","Company","Contact","Customer","Status","Pipeline","Conn.","Remarks",null];
       return `<div class="scroll"><table id="dTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}`;
 }
 function addDSRModal(){
