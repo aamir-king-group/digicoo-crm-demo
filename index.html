@@ -110,6 +110,8 @@ input.colf::placeholder{color:#5c6c8c}
 .bell{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:16px;cursor:pointer;margin-right:10px;color:var(--txt)}
 .bell:hover{border-color:var(--brand2)}
 .bellbadge{position:absolute;top:-7px;right:-7px;background:var(--brand);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;line-height:1.5}
+.chatbtn{position:relative;padding:8px 10px}
+.cbadge{position:absolute;top:-6px;right:-5px;background:var(--brand);color:#fff;border-radius:20px;font-size:9px;font-weight:700;padding:0 5px;line-height:16px;min-width:16px;text-align:center}
 .notifpanel{position:fixed;z-index:61;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.55);width:360px;max-height:64vh;overflow:auto;padding:8px}
 .notif{display:flex;gap:10px;padding:11px 10px;border-bottom:1px solid var(--line)}
 .notif.unread{background:rgba(227,6,19,.07)}
@@ -340,7 +342,7 @@ let CURRENT="dash";
    Cross-tab real-time via BroadcastChannel (+ storage fallback).
    In production this layer is replaced by server push (WebSocket).
    ============================================================ */
-var BC=null, toastedIds=new Set(), CASE_OPEN=null;
+var BC=null, toastedIds=new Set(), CASE_OPEN=null, SEEN={};
 try{ BC=new BroadcastChannel("digicoo_crm_"+DBKEY); BC.onmessage=onRemoteChange; }catch(e){}
 try{ window.addEventListener("storage",e=>{ if(e.key===DBKEY) onRemoteChange(); }); }catch(e){}
 function onRemoteChange(){
@@ -446,7 +448,7 @@ function doLogin(role,name){
   $("app").style.display="grid";
   $("whoName").textContent=name; $("whoRole").textContent=ROLES[role].name;
   $("whoAv").textContent=name[0];
-  CURRENT="dash"; renderNav(); render();
+  CURRENT="dash"; loadSeen(); renderNav(); render();
   toastedIds=new Set((DB.notifications||[]).map(n=>n.id)); renderBell();
 }
 function logout(){ SESSION=null; $("app").style.display="none"; $("login").style.display="flex"; }
@@ -563,6 +565,7 @@ function viewDSR(){
     <td>${d.connected==="YES"?'<span style="color:var(--green)">●</span>':'<span class="muted">○</span>'}</td>
     <td class="muted">${d.remarks||""}</td>
     <td style="white-space:nowrap">${(()=>{const p=priorContact(d);return p?`<span class="dupwarn" title="Already called by ${p.by} on ${p.date} (${p.no})" onclick="dupInfo('${d.id}')">⚠ Dup</span>`:'';})()}
+      ${chatBtn(d.dsrNo)}
       <button class="btn-ghost" onclick="updateDSR('${d.id}')">Update</button>
       <button class="btn-ghost kebab" onclick="rowMenu('${d.id}',event)">⋯</button></td></tr>`).join("");
   const canAdd=isAgent||can("import_leads");
@@ -657,7 +660,6 @@ function rowMenu(id,ev){
   items.push(d.converted
     ? `<div class="mi disabled">✓ Already in Pipeline</div>`
     : `<button class="mi" onclick="closeMenu();convertToPipeline('${id}')">→ Convert to Pipeline</button>`);
-  if(d.converted) items.push(`<button class="mi" onclick="closeMenu();openCase('${d.dsrNo}')">💬 Open Case (chat &amp; docs)</button>`);
   items.push(`<button class="mi" onclick="closeMenu();openHistory('${id}')">History (${(d.history||[]).length})</button>`);
   if(priorContact(d)) items.push(`<button class="mi" onclick="closeMenu();dupInfo('${id}')">⚠ View earlier contact</button>`);
   const x=Math.min(ev.clientX, window.innerWidth-210), y=Math.min(ev.clientY, window.innerHeight-160);
@@ -715,7 +717,7 @@ function viewPipeline(){
     <td><b style="color:var(--brand2)">${p.dsrNo||"-"}</b></td><td>${p.date}</td><td>${p.company}</td><td>${p.customer||"-"}</td>
     <td>${p.product}<br><small class="muted">${p.cat}</small></td><td>${p.qty}</td><td>${AED(p.mrc)}</td><td class="muted">${AED(p.annual)}</td>
     <td>${tag(p.stage)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
-    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openCase('${p.dsrNo}')" title="Case chat &amp; documents">💬</button><button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
+    <td style="white-space:nowrap">${chatBtn(p.dsrNo)}<button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
   return `<div class="kpis">
       ${kpi("Open Deals",open.length,"var(--blue)",AED(openMRC)+" MRC")}
       ${kpi("Weighted Pipeline",AED(weighted),"var(--purple)","Stage-adjusted forecast")}
@@ -731,8 +733,7 @@ function viewPipeline(){
 function rowMenuPipe(id,ev){
   ev.stopPropagation();
   const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
-  const items=[`<button class="mi" onclick="closeMenu();openCase('${p.dsrNo}')">💬 Open Case (chat &amp; docs)</button>`,
-    `<button class="mi" onclick="closeMenu();openHistoryByNo('${p.dsrNo}')">History</button>`];
+  const items=[`<button class="mi" onclick="closeMenu();openHistoryByNo('${p.dsrNo}')">History</button>`];
   if(!p.stage.includes("100%")&&!p.stage.includes("Lost")) items.push(`<button class="mi" onclick="closeMenu();escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
   const x=Math.min(ev.clientX,window.innerWidth-210), y=Math.min(ev.clientY,window.innerHeight-160);
   $("menuHost").innerHTML=`<div class="menubackdrop" onclick="closeMenu()"></div><div class="menucard" style="left:${x}px;top:${y}px">${items.join("")}</div>`;
@@ -812,7 +813,7 @@ function viewBackoffice(){
     <td>${AED(o.mrc)}</td><td>${o.agent}</td><td>${o.pid||'<span class="muted">—</span>'}</td>
     <td>${o.eOrderNo?`<b style="color:var(--amber)">${o.eOrderNo}</b>`:'<span class="muted">—</span>'}</td>
     <td>${tag(o.status)}</td><td>${o.actDate||'<span class="muted">—</span>'}</td>
-    <td style="white-space:nowrap"><button class="btn-ghost" onclick="openCase('${o.dsrNo}')" title="Case chat &amp; documents">💬</button><button class="btn-ghost" onclick="openOrder('${o.id}')">Process</button></td></tr>`).join("");
+    <td style="white-space:nowrap">${chatBtn(o.dsrNo)}<button class="btn-ghost" onclick="openOrder('${o.id}')">Process</button></td></tr>`).join("");
   const counts=ORDER_STATUS.map(s=>`${s}: ${rows.filter(o=>o.status===s).length}`).join(" · ");
   const cols=["DSR No","Sub Date","Customer","Product","Qty","MRC","Agent","PID","e& Order No","Status","Activated",null];
   return `<div class="toolbar"><span class="muted">${rows.length} orders · search any column below</span></div>
@@ -866,12 +867,21 @@ function caseContext(dsrNo){
           agent:(p&&p.agent)||(o&&o.agent)||(d&&d.agent)||""};
 }
 function caseStakeholders(dsrNo){ const c=caseContext(dsrNo); return [...new Set([c.agent,...mgmtChain(c.agent),...backOfficeNames()])].filter(Boolean); }
+// ---- Per-user unread message tracking (stored per browser) ----
+function seenKey(){ return "digicoo_seen_"+((SESSION&&SESSION.name)||"x"); }
+function loadSeen(){ try{ SEEN=JSON.parse(localStorage.getItem(seenKey())||"{}"); }catch(e){ SEEN={}; } }
+function markSeen(dsrNo){ const t=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo].length:0; SEEN[dsrNo]=t; try{ localStorage.setItem(seenKey(),JSON.stringify(SEEN)); }catch(e){} }
+function unreadCount(dsrNo){ const t=(DB.threads&&DB.threads[dsrNo])?DB.threads[dsrNo]:[]; const seen=SEEN[dsrNo]||0; let n=0; for(let i=seen;i<t.length;i++){ if(t[i].user!==(SESSION&&SESSION.name)) n++; } return n; }
+function chatBtn(dsrNo){
+  const u=unreadCount(dsrNo);
+  return `<button class="btn-ghost chatbtn" onclick="openCase('${dsrNo}')" title="Case chat &amp; documents">💬${u>0?`<span class="cbadge">${u>9?'9+':u}</span>`:''}</button>`;
+}
 const _esc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function parseMentions(text){ return DB.employees.filter(e=>new RegExp("@"+_esc(e.name)+"(?![A-Za-z])","i").test(text)).map(e=>e.name); }
 function highlightMentions(t){ let s=t; DB.employees.forEach(e=>{ s=s.replace(new RegExp("@"+_esc(e.name)+"(?![A-Za-z])","gi"), m=>`<span class="mention">${m}</span>`); }); return s; }
 function tagInsert(name){ const el=document.getElementById("cmsg"); if(!el)return; el.value=(el.value?el.value.replace(/\s*$/,"")+" ":"")+"@"+name+" "; el.focus(); }
 function openCase(dsrNo){
-  closeMenu(); CASE_OPEN=dsrNo;
+  closeMenu(); CASE_OPEN=dsrNo; markSeen(dsrNo);
   const t=threadFor(dsrNo), ctx=caseContext(dsrNo), me=SESSION&&SESSION.name;
   const rn=r=>ROLES[r]?ROLES[r].name:r;
   const chips=caseStakeholders(dsrNo).filter(n=>n!==me).map(n=>`<button class="chip" onclick="tagInsert('${n}')">@${n}</button>`).join("");
@@ -898,7 +908,7 @@ function openCase(dsrNo){
     </div>`;
   const b=document.getElementById("caseBody"); if(b) b.scrollTop=b.scrollHeight;
 }
-function closeCase(){ CASE_OPEN=null; document.getElementById("caseHost").innerHTML=""; }
+function closeCase(){ CASE_OPEN=null; document.getElementById("caseHost").innerHTML=""; render(); }
 function sendCaseMsg(dsrNo){
   const el=document.getElementById("cmsg"); const v=((el&&el.value)||"").trim(); if(!v)return;
   const mentioned=parseMentions(v);
