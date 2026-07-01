@@ -545,11 +545,21 @@ function viewDash(){
   let lb=`<table><tr><th>Agent</th><th>Target</th><th>Submission MRC</th><th>Activated</th><th>Pending Target</th><th>Ach %</th></tr>`+
     board.map(b=>`<tr><td>${b.a}</td><td>${AED(b.t)}</td><td style="color:var(--amber)">${AED(b.sub)}</td><td style="color:var(--green)">${AED(b.av)}</td><td style="color:${b.pend>0?'var(--brand2)':'var(--green)'}">${AED(b.pend)}</td><td>${tag(b.pct+"%")}</td></tr>`).join("")+`</table>`;
 
-  return k+`<div class="grid2">
+  return actionNeeded()+k+`<div class="grid2">
     <div class="card"><h3>Pipeline by Stage</h3>${funnel}</div>
     <div class="card"><h3>Agent Performance (Activated MRC)</h3>${lb}</div>
   </div>
   <div class="card"><h3>Quick AI Insight <span class="badge">AI</span></h3>${miniInsight(ord)}</div>`;
+}
+function actionNeeded(){
+  const r=SESSION.role, me=SESSION.name; let items=[], title="";
+  if(r==="team_leader"){ items=DB.pipeline.filter(p=>p.approval==="pending_tl"&&p.tl===me); title="deals awaiting your approval"; }
+  else if(r==="agent"){ items=DB.pipeline.filter(p=>p.approval==="rejected"&&p.agent===me); title="rejected — revise & resubmit"; }
+  else if(r==="backoffice"){ items=DB.pipeline.filter(p=>p.approval==="approved"); title="approved deals ready to process"; }
+  if(!items.length) return "";
+  return `<div class="card" style="border-left:4px solid var(--amber)"><h3>🔔 Action Needed <span class="badge">${items.length}</span> <span class="muted" style="font-weight:400;font-size:12px">— ${title}</span></h3>
+    <table><tr><th>DSR No</th><th>Company</th><th>Agent</th><th>MRC</th><th></th></tr>
+    ${items.map(p=>`<tr><td><b style="color:var(--brand2)">${p.dsrNo}</b></td><td>${p.company}</td><td>${p.agent}</td><td>${AED(p.mrc)}</td><td><button class="btn-primary" onclick="openDeal('${p.id}')">Open</button></td></tr>`).join("")}</table></div>`;
 }
 function kpi(label,val,color,sub){
   return `<div class="kpi"><div class="label">${label}</div><div class="val" style="color:${color}">${val}</div><div class="sub muted">${sub}</div></div>`;
@@ -733,11 +743,12 @@ function viewPipeline(){
   const weighted=pipe.reduce((a,p)=>a+p.mrc*pct(p.stage)/100,0);
   const wonItems=pipe.filter(p=>p.stage.includes("100%"));
   const won=wonItems.reduce((a,p)=>a+p.mrc,0);
-  const cols=["DSR No","Date","Company","Customer","Product","Qty","MRC/mo","Annual","Stage","Agent","TL",null];
-  let body=pipe.map(p=>`<tr>
+  const cols=["DSR No","Date","Company","Customer","Product","Qty","MRC/mo","Annual","Stage","Approval","Agent","TL",null];
+  const needsMe=p=>(SESSION.role==="team_leader"&&p.approval==="pending_tl"&&p.tl===SESSION.name)||(SESSION.role==="agent"&&p.approval==="rejected"&&p.agent===SESSION.name)||(SESSION.role==="backoffice"&&p.approval==="approved");
+  let body=pipe.map(p=>`<tr${needsMe(p)?' style="background:rgba(246,183,60,.10)"':''}>
     <td><b style="color:var(--brand2)">${p.dsrNo||"-"}</b></td><td>${p.date}</td><td>${p.company}</td><td>${p.customer||"-"}</td>
     <td>${p.product}<br><small class="muted">${p.cat}</small></td><td>${p.qty}</td><td>${AED(p.mrc)}</td><td class="muted">${AED(p.annual)}</td>
-    <td>${tag(p.stage)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
+    <td>${tag(p.stage)}</td><td>${needsMe(p)?'🔔 ':''}${approvalBadge(p)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
     <td style="white-space:nowrap">${chatBtn(p.dsrNo)}<button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
   return `<div class="kpis">
       ${kpi("Open Deals",open.length,"var(--blue)",AED(openMRC)+" MRC")}
@@ -761,8 +772,16 @@ function rowMenuPipe(id,ev){
 }
 function openDeal(id){
   const p=DB.pipeline.find(x=>x.id===id);
+  const appLine=p.approval?`<div class="flag ${p.approval==='approved'?'good':p.approval==='rejected'?'bad':'warn'}" style="margin-top:0">Approval status: <b>${APPROVAL_LABEL[p.approval]||p.approval}</b>${p.approvalBy?` · by ${p.approvalBy}`:''}</div>`:"";
+  let extra=`<button class="btn-ghost" onclick="openHistoryByNo('${p.dsrNo}')">History</button>`;
+  if(SESSION.role==="agent" && p.agent===SESSION.name && p.approval!=="pending_tl")
+    extra+=`<button class="btn-ghost" style="color:var(--amber)" onclick="escalateToTL('${p.id}')">▲ Escalate to Team Leader</button>`;
+  if(SESSION.role==="team_leader" && p.approval==="pending_tl")
+    extra+=`<button class="btn-ghost" style="color:var(--green)" onclick="approveDeal('${p.id}')">✓ Approve → Back Office</button><button class="btn-ghost" style="color:var(--brand2)" onclick="rejectDeal('${p.id}')">✗ Reject → Agent</button>`;
+  extra+=`<button class="btn-ghost" onclick="escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`;
   openModal(`Opportunity — ${p.company}`,`
     <div class="flag warn" style="margin-top:0">Ref <b>${p.dsrNo||'-'}</b> · same number flows to Back Office when won (never changes)</div>
+    ${appLine}
     <div class="row"><div><label>Customer</label><input id="d_cu" value="${p.customer||''}"></div><div><label>Agent</label><input value="${p.agent}" disabled></div></div>
     <div class="row"><div><label>Product</label><select id="d_pr" onchange="prodPick('d')">${DB.products.map(pr=>`<option data-cat="${pr.cat}" data-mrc="${pr.mrc}" ${pr.title===p.product?'selected':''}>${pr.title}</option>`).join("")}</select></div><div><label>Category</label><input id="d_cat" value="${p.cat}" disabled></div></div>
     <div class="row"><div><label>Qty</label><input id="d_qt" type="number" value="${p.qty}"></div><div><label>Unit MRC</label><input id="d_pc" type="number" value="${p.price}"></div></div>
@@ -789,7 +808,32 @@ function openDeal(id){
       notify([...backOfficeNames(), p.agent], `🎉 Deal WON ${p.dsrNo} by ${p.agent} — ready to process in Back Office (${AED(p.mrc)}/mo)`, {dsrNo:p.dsrNo});
     }
     save(); render();
-  },`<button class="btn-ghost" onclick="openHistoryByNo('${p.dsrNo}')">History</button><button class="btn-ghost" onclick="escalateDeal('${p.id}')">⚑ Escalate to Sales Head</button>`);
+  },extra);
+}
+const APPROVAL_LABEL={pending_tl:"⏳ Pending Team Leader",approved:"✓ Approved → Back Office",rejected:"✗ Rejected — back to agent"};
+function approvalBadge(p){ const a=p&&p.approval; if(!a)return '<span class="muted">—</span>'; const c=a==="approved"?"var(--green)":a==="rejected"?"var(--brand2)":"var(--amber)"; return `<span class="tag" style="background:${c}22;color:${c}">${APPROVAL_LABEL[a]||a}</span>`; }
+function escalateToTL(id){
+  const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
+  p.approval="pending_tl"; p.approvalBy=SESSION.name;
+  logByDsrNo(p.dsrNo,`Escalated to Team Leader (${p.tl}) for approval by ${SESSION.name}`,"Pipeline");
+  notify([p.tl], `📋 Deal ${p.dsrNo} (${p.company}) needs your approval — from ${p.agent}`, {dsrNo:p.dsrNo});
+  alert(`Sent to Team Leader ${p.tl} for approval.`); save(); closeModal(); render();
+}
+function approveDeal(id){
+  const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
+  p.approval="approved"; p.approvalBy=SESSION.name;
+  let o=DB.orders.find(x=>x.dsrNo===p.dsrNo);
+  if(o){ if(o.status==="In Pipeline") o.status="Submitted"; o.remarks=(o.remarks?o.remarks+" · ":"")+"TL approved"; }
+  logByDsrNo(p.dsrNo,`Approved by Team Leader (${SESSION.name}) → sent to Back Office`,"Back Office");
+  notify([...backOfficeNames(), p.agent], `✅ Deal ${p.dsrNo} (${p.company}) approved by ${SESSION.name} — ready in Back Office`, {dsrNo:p.dsrNo});
+  alert("Approved and sent to Back Office."); save(); closeModal(); render();
+}
+function rejectDeal(id){
+  const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
+  p.approval="rejected"; p.approvalBy=SESSION.name;
+  logByDsrNo(p.dsrNo,`Rejected by Team Leader (${SESSION.name}) — returned to agent ${p.agent}`,"Pipeline");
+  notify([p.agent], `↩ Deal ${p.dsrNo} (${p.company}) rejected by ${SESSION.name} — please revise & resubmit`, {dsrNo:p.dsrNo});
+  alert("Rejected and returned to the agent."); save(); closeModal(); render();
 }
 function escalateDeal(id){ const p=DB.pipeline.find(x=>x.id===id); p.escalated=true; logByDsrNo(p.dsrNo,"Escalated to Sales Head (Amir Qadri)","Pipeline"); notify([salesHeadName(),...mgmtChain(p.agent).slice(0,2)], `⚑ Deal ${p.dsrNo} (${p.company}) escalated by ${SESSION.name}`, {dsrNo:p.dsrNo}); alert("Escalated to Sales Head (Amir Qadri) for support."); save(); closeModal(); render(); }
 function convertToPipeline(id){
