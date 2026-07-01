@@ -49,14 +49,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .nav-item .ic{width:18px;text-align:center}
 .nav-sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5c6c8c;margin:14px 8px 6px}
 .main{padding:20px 26px;overflow:auto;height:100vh}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;border-bottom:3px solid var(--role,var(--brand));padding-bottom:12px}
+.rolepill{display:inline-block;background:var(--role,var(--brand));color:#fff;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
 .topbar h1{font-size:20px;margin:0}
 .who{display:flex;align-items:center;gap:10px}
-.avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--role,var(--brand));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
 
 /* Cards / KPIs */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--role,var(--line));border-radius:var(--radius);padding:16px}
 .kpi .label{color:var(--muted);font-size:12px}
 .kpi .val{font-size:26px;font-weight:800;margin-top:4px}
 .kpi .sub{font-size:12px;margin-top:4px}
@@ -450,11 +451,15 @@ function loginSubmit(){
   if(e){ doLogin(e.role,e.name); }
   else { document.getElementById("lg_err").textContent="Invalid username or password."; }
 }
+const ROLE_COLOR={agent:"#3b82f6",team_leader:"#22c55e",teams_head:"#8b5cf6",sales_head:"#f59e0b",backoffice:"#06b6d4",accountant:"#14b8a6",hr:"#ec4899",admin:"#94a3b8"};
+function roleColor(r){ return ROLE_COLOR[r]||"var(--brand)"; }
 function doLogin(role,name){
   SESSION={role,name};
   $("login").style.display="none";
   $("app").style.display="grid";
-  $("whoName").textContent=name; $("whoRole").textContent=ROLES[role].name;
+  document.documentElement.style.setProperty("--role", roleColor(role));
+  $("whoName").textContent=name;
+  const wr=$("whoRole"); wr.textContent=ROLES[role].name; wr.className="rolepill";
   $("whoAv").textContent=name[0];
   CURRENT="dash"; loadSeen(); renderNav(); render();
   toastedIds=new Set((DB.notifications||[]).map(n=>n.id)); renderBell();
