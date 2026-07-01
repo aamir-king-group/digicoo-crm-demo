@@ -393,7 +393,7 @@ let CURRENT="dash";
    Cross-tab real-time via BroadcastChannel (+ storage fallback).
    In production this layer is replaced by server push (WebSocket).
    ============================================================ */
-var BC=null, toastedIds=new Set(), CASE_OPEN=null, SEEN={}, AGENT_FILTER="";
+var BC=null, toastedIds=new Set(), CASE_OPEN=null, SEEN={}, AGENT_FILTER="", DATE_FILTER="today", DATE_FROM="", DATE_TO="";
 try{ BC=new BroadcastChannel("digicoo_crm_"+DBKEY); BC.onmessage=onRemoteChange; }catch(e){}
 try{ window.addEventListener("storage",e=>{ if(e.key===DBKEY) onRemoteChange(); }); }catch(e){}
 function onRemoteChange(){
@@ -498,6 +498,7 @@ function doLogin(role,name){
   $("whoAv").textContent=name[0];
   try{ AGENT_FILTER=localStorage.getItem("digicoo_agent_"+name)||""; }catch(e){ AGENT_FILTER=""; }
   if(AGENT_FILTER && !baseVisibleAgents().includes(AGENT_FILTER)) AGENT_FILTER="";
+  DATE_FILTER="today"; DATE_FROM=""; DATE_TO=""; // date filter resets to today each session
   CURRENT="dash"; loadSeen(); renderNav(); render();
   toastedIds=new Set((DB.notifications||[]).map(n=>n.id)); renderBell();
 }
@@ -543,6 +544,19 @@ function visibleAgents(){
   if(AGENT_FILTER && base.includes(AGENT_FILTER)) return [AGENT_FILTER];
   return base;
 }
+// ---- DSR date filter ----
+function dsrDateRange(){
+  const t=new Date(); t.setHours(0,0,0,0); const iso=d=>d.toISOString().slice(0,10);
+  switch(DATE_FILTER){
+    case "7d": { const s=new Date(t); s.setDate(s.getDate()-6); return {from:iso(s),to:iso(t),label:"Last 7 days ("+iso(s)+" → "+iso(t)+")"}; }
+    case "mtd": { const s=new Date(t.getFullYear(),t.getMonth(),1); return {from:iso(s),to:iso(t),label:"Month to date"}; }
+    case "ytd": { const s=new Date(t.getFullYear(),0,1); return {from:iso(s),to:iso(t),label:"Year to date"}; }
+    case "custom": return {from:DATE_FROM||"0000-01-01",to:DATE_TO||"9999-12-31",label:"Custom: "+(DATE_FROM||"…")+" → "+(DATE_TO||"…")};
+    default: return {from:iso(t),to:iso(t),label:"Today ("+iso(t)+")"};
+  }
+}
+function setDateFilter(v){ DATE_FILTER=v; if(v==="custom"){ const t=new Date().toISOString().slice(0,10); if(!DATE_FROM)DATE_FROM=t; if(!DATE_TO)DATE_TO=t; } render(); }
+function setCustomDate(which,val){ if(which==="from")DATE_FROM=val; else DATE_TO=val; render(); }
 // ---- Agent drill-down filter (TL/Teams Head/Sales Head can focus one agent) ----
 function setAgentFilter(v){ AGENT_FILTER=v||""; try{ localStorage.setItem("digicoo_agent_"+((SESSION&&SESSION.name)||"x"), AGENT_FILTER); }catch(e){} render(); }
 function renderAgentFilter(){
@@ -639,7 +653,8 @@ function miniInsight(ord){
 function viewDSR(){
   const ags=visibleAgents();
   const isAgent=SESSION.role==="agent";
-  const rows=DB.dsr.filter(recVisible).sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
+  const dr=dsrDateRange();
+  const rows=DB.dsr.filter(d=>recVisible(d) && d.date && d.date>=dr.from && d.date<=dr.to).sort((a,b)=>dsrSeqNum(b.dsrNo)-dsrSeqNum(a.dsrNo));
   const today=new Date().toISOString().slice(0,10);
   // quick stats
   const total=rows.length, conn=rows.filter(d=>d.connected==="YES").length;
@@ -665,10 +680,19 @@ function viewDSR(){
     <div class="toolbar">
       ${canAdd?'<button class="btn-primary" onclick="addDSRModal()">+ Log Call</button>':''}
       ${canAdd?'<button class="btn-ghost" onclick="importDSRModal()">⤓ Import list (Google Sheet / CSV)</button>':''}
-      <span class="muted">Daily Sales Report — search any column below · agents build their list, call, and update status here</span>
+      <select onchange="setDateFilter(this.value)" style="width:auto;min-width:150px">
+        <option value="today" ${DATE_FILTER==='today'?'selected':''}>Today</option>
+        <option value="7d" ${DATE_FILTER==='7d'?'selected':''}>Last 7 Days</option>
+        <option value="mtd" ${DATE_FILTER==='mtd'?'selected':''}>Month to Date</option>
+        <option value="ytd" ${DATE_FILTER==='ytd'?'selected':''}>Year to Date</option>
+        <option value="custom" ${DATE_FILTER==='custom'?'selected':''}>Custom…</option>
+      </select>
+      ${DATE_FILTER==='custom'?`<input type="date" value="${DATE_FROM}" onchange="setCustomDate('from',this.value)" style="width:auto"><span class="muted">to</span><input type="date" value="${DATE_TO}" onchange="setCustomDate('to',this.value)" style="width:auto">`:''}
+      <span class="muted">${dr.label} · ${total} calls</span>
     </div>
     ${(()=>{const cols=isAgent?["DSR No","Date","Company","Contact","Customer","Status","Pipeline","Conn.","Remarks",null]:["DSR No","Date","Agent","Company","Contact","Customer","Status","Pipeline","Conn.","Remarks",null];
-      return `<div class="scroll"><table id="dTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}`;
+      return `<div class="scroll"><table id="dTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;})()}
+    ${total===0?'<p class="muted" style="padding:14px">No calls in this date range. Pick <b>Year to Date</b> or <b>Custom</b> to see historical / imported data.</p>':''}`;
 }
 function addDSRModal(){
   openModal("Log Call — DSR Entry",`
