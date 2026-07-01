@@ -373,7 +373,7 @@ function seed(){
 
 const DBKEY="digicoo_db_v10";
 let DB = load();
-function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; if(d.employees)d.employees.forEach(e=>{ if(!e.username)e.username=defUser(e.name); if(!e.password)e.password=defUser(e.name)+"@2026"; }); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
+function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products || d.products.length<10 || d.products.some(p=>/Business First Plus|Business Extreme|SOHO3|Business On4|IP Connect Access5/.test(p.title))) d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; if(d.employees)d.employees.forEach(e=>{ if(!e.username)e.username=defUser(e.name); if(!e.password)e.password=defUser(e.name)+"@2026"; }); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
 // Permanent, never-reused DSR reference number — routed across DSR → Pipeline → Back Office
 function nextDsrNo(){ DB.counters.dsr=(DB.counters.dsr||0)+1; return "DSR-"+String(DB.counters.dsr).padStart(5,'0'); }
@@ -846,7 +846,7 @@ function viewPipeline(){
     <div class="toolbar">
       <span class="muted">Deals enter only from DSR — Agent (mark a call "Interested" → Convert to Pipeline). Search any column · click Update to change stage, mark won, or escalate.</span>
     </div>
-    <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols,{Product:[...new Set(pipe.map(p=>p.product).filter(Boolean))].sort(),Stage:PIPE_STAGES})}${body}</table></div>`;
+    <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols,{Product:[...new Set([...DB.products.map(p=>p.title),...pipe.map(p=>p.product).filter(Boolean)])].sort(),Stage:PIPE_STAGES})}${body}</table></div>`;
 }
 function rowMenuPipe(id,ev){
   ev.stopPropagation();
