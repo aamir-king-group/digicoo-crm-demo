@@ -784,8 +784,7 @@ function viewPipeline(){
       ${kpi("Total Deals",pipe.length,"var(--amber)","All stages")}
     </div>
     <div class="toolbar">
-      ${SESSION.role==="agent"?'<button class="btn-primary" onclick="addDealModal()">+ New Opportunity</button>':''}
-      <span class="muted">Search any column below · click Update to change stage, mark won, or escalate</span>
+      <span class="muted">Deals enter only from DSR — Agent (mark a call "Interested" → Convert to Pipeline). Search any column · click Update to change stage, mark won, or escalate.</span>
     </div>
     <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;
 }
