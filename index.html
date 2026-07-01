@@ -743,12 +743,12 @@ function viewPipeline(){
   const weighted=pipe.reduce((a,p)=>a+p.mrc*pct(p.stage)/100,0);
   const wonItems=pipe.filter(p=>p.stage.includes("100%"));
   const won=wonItems.reduce((a,p)=>a+p.mrc,0);
-  const cols=["DSR No","Date","Company","Customer","Product","Qty","MRC/mo","Annual","Stage","Approval","Agent","TL",null];
+  const cols=["DSR No","Date","Company","Customer","Product","Qty","MRC/mo","Annual","Stage","Approval","Currently With","Agent","TL",null];
   const needsMe=p=>(SESSION.role==="team_leader"&&p.approval==="pending_tl"&&p.tl===SESSION.name)||(SESSION.role==="agent"&&p.approval==="rejected"&&p.agent===SESSION.name)||(SESSION.role==="backoffice"&&p.approval==="approved");
   let body=pipe.map(p=>`<tr${needsMe(p)?' style="background:rgba(246,183,60,.10)"':''}>
     <td><b style="color:var(--brand2)">${p.dsrNo||"-"}</b></td><td>${p.date}</td><td>${p.company}</td><td>${p.customer||"-"}</td>
     <td>${p.product}<br><small class="muted">${p.cat}</small></td><td>${p.qty}</td><td>${AED(p.mrc)}</td><td class="muted">${AED(p.annual)}</td>
-    <td>${tag(p.stage)}</td><td>${needsMe(p)?'🔔 ':''}${approvalBadge(p)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
+    <td>${tag(p.stage)}</td><td>${needsMe(p)?'🔔 ':''}${approvalBadge(p)}</td><td>${holderChip(p)}</td><td>${p.agent}${p.escalated?' <span title="Escalated to Sales Head" style="color:var(--brand2)">⚑</span>':''}</td><td class="muted">${p.tl}</td>
     <td style="white-space:nowrap">${chatBtn(p.dsrNo)}<button class="btn-ghost" onclick="openDeal('${p.id}')">Update</button><button class="btn-ghost kebab" onclick="rowMenuPipe('${p.id}',event)">⋯</button></td></tr>`).join("");
   return `<div class="kpis">
       ${kpi("Open Deals",open.length,"var(--blue)",AED(openMRC)+" MRC")}
@@ -812,6 +812,20 @@ function openDeal(id){
 }
 const APPROVAL_LABEL={pending_tl:"⏳ Pending Team Leader",approved:"✓ Approved → Back Office",rejected:"✗ Rejected — back to agent"};
 function approvalBadge(p){ const a=p&&p.approval; if(!a)return '<span class="muted">—</span>'; const c=a==="approved"?"var(--green)":a==="rejected"?"var(--brand2)":"var(--amber)"; return `<span class="tag" style="background:${c}22;color:${c}">${APPROVAL_LABEL[a]||a}</span>`; }
+// Which desk currently holds the task
+function currentHolder(p){
+  if(p.stage&&p.stage.includes("Lost")) return {who:"Closed / Lost",role:null};
+  if(p.stage&&p.stage.includes("100%")) return {who:"Back Office",role:"backoffice"};
+  if(p.approval==="approved") return {who:"Back Office",role:"backoffice"};
+  if(p.approval==="pending_tl") return {who:"Team Leader",role:"team_leader"};
+  if(p.approval==="rejected") return {who:"Agent",role:"agent"};
+  if(p.escalated) return {who:"Sales Head",role:"sales_head"};
+  return {who:"Agent",role:"agent"};
+}
+function holderChip(p){
+  const h=currentHolder(p); const c=h.role?(ROLE_COLOR[h.role]||"#93a1bd"):"#93a1bd";
+  return `<span class="tag" style="background:${c}22;color:${c}">${h.who}</span>`;
+}
 function escalateToTL(id){
   const p=DB.pipeline.find(x=>x.id===id); if(!p)return;
   p.approval="pending_tl"; p.approvalBy=SESSION.name;
