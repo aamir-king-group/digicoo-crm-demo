@@ -140,6 +140,12 @@ input.colf::placeholder{color:#5c6c8c}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--txt);cursor:pointer}
 .chip:hover{border-color:var(--brand2);color:var(--brand2)}
 .mention{color:var(--brand2);font-weight:700}
+.ssel{position:relative}
+.ssel-inp{width:100%;background-image:none}
+.ssel-list{position:fixed;z-index:90;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.55);max-height:230px;overflow:auto}
+.ssel-it{padding:8px 11px;font-size:13px;cursor:pointer;color:var(--txt)}
+.ssel-it:hover,.ssel-it.on{background:var(--panel2)}
+.ssel-it.muted{color:var(--muted);cursor:default}
 </style>
 </head>
 <body>
@@ -512,6 +518,7 @@ function render(){
     accounting:viewAccounting, ai:viewAI, admin:viewAdmin
   }[CURRENT])();
   renderBell();
+  enhanceSelects($("view"));
 }
 
 /* ---------- Scope: which agents can current user see ---------- */
@@ -1370,6 +1377,7 @@ function openModal(title,bodyHTML,onSave,extraBtn=""){
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">${extraBtn}<button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-primary" id="mSave">Save</button></div>
   </div></div>`;
   $("mSave").onclick=()=>{ onSave(); closeModal(); };
+  enhanceSelects($("modalHost"));
 }
 function openModalInfo(title,bodyHTML){
   $("modalHost").innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="box">
@@ -1377,8 +1385,36 @@ function openModalInfo(title,bodyHTML){
     ${bodyHTML}
     <div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="btn-primary" onclick="closeModal()">Close</button></div>
   </div></div>`;
+  enhanceSelects($("modalHost"));
 }
 function closeModal(){ $("modalHost").innerHTML=""; }
+// Turn every native <select> into a searchable dropdown (keeps the underlying select so all value/dataset reads still work)
+function enhanceSelects(root){
+  if(!root||!root.querySelectorAll) return;
+  root.querySelectorAll("select:not([data-enh])").forEach(sel=>{
+    sel.setAttribute("data-enh","1"); sel.style.display="none";
+    const wrap=document.createElement("div"); wrap.className="ssel";
+    const inp=document.createElement("input"); inp.className="ssel-inp"; inp.placeholder="Search…";
+    const cur=sel.options[sel.selectedIndex]; inp.value=cur?cur.textContent:""; inp.dataset.committed=inp.value;
+    sel.parentNode.insertBefore(wrap,sel); wrap.appendChild(inp); wrap.appendChild(sel);
+    let listEl=null;
+    function close(){ if(listEl){listEl.remove(); listEl=null;} document.removeEventListener("mousedown",outside,true); window.removeEventListener("scroll",close,true); }
+    function outside(e){ if(!wrap.contains(e.target)&&(!listEl||!listEl.contains(e.target))){ inp.value=inp.dataset.committed; close(); } }
+    function draw(q){ q=(q||"").toLowerCase(); listEl.innerHTML="";
+      [...sel.options].forEach((o,i)=>{ if(o.textContent.toLowerCase().includes(q)){
+        const it=document.createElement("div"); it.className="ssel-it"+(i===sel.selectedIndex?" on":""); it.textContent=o.textContent;
+        it.onmousedown=(e)=>{ e.preventDefault(); sel.selectedIndex=i; inp.value=o.textContent; inp.dataset.committed=o.textContent; close(); sel.dispatchEvent(new Event("change",{bubbles:true})); };
+        listEl.appendChild(it); } });
+      if(!listEl.children.length){ const it=document.createElement("div"); it.className="ssel-it muted"; it.textContent="No match"; listEl.appendChild(it); }
+    }
+    function open(){ close(); const r=inp.getBoundingClientRect(); listEl=document.createElement("div"); listEl.className="ssel-list";
+      listEl.style.left=r.left+"px"; listEl.style.top=(r.bottom+2)+"px"; listEl.style.width=r.width+"px"; document.body.appendChild(listEl); draw("");
+      document.addEventListener("mousedown",outside,true); window.addEventListener("scroll",close,true); }
+    inp.onfocus=()=>{ inp.value=""; open(); };
+    inp.oninput=()=>{ if(listEl) draw(inp.value); else open(); };
+    inp.onkeydown=(e)=>{ if(e.key==="Escape"){ inp.value=inp.dataset.committed; close(); } };
+  });
+}
 function filterTable(id,q){
   q=q.toLowerCase();
   document.querySelectorAll("#"+id+" tr").forEach((tr,i)=>{ if(i===0||tr.classList.contains("frow")||tr.classList.contains("fkeep"))return; tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"; });
