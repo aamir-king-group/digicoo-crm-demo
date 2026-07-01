@@ -537,11 +537,13 @@ function viewDash(){
   // agent leaderboard
   const board=ags.map(a=>{
     const t=DB.employees.find(e=>e.name===a)?.target||0;
-    const av=ord.filter(o=>o.agent===a&&(o.status==="Activated"||o.status==="Closed")).reduce((s,o)=>s+o.mrc,0);
-    return {a,t,av,pct:t?Math.round(av/t*100):0};
+    const agOrd=ord.filter(o=>o.agent===a);
+    const sub=agOrd.reduce((s,o)=>s+o.mrc,0);
+    const av=agOrd.filter(o=>o.status==="Activated"||o.status==="Closed").reduce((s,o)=>s+o.mrc,0);
+    return {a,t,sub,av,pend:t-av,pct:t?Math.round(av/t*100):0};
   }).sort((x,y)=>y.av-x.av);
-  let lb=`<table><tr><th>Agent</th><th>Target</th><th>Activated</th><th>Ach %</th></tr>`+
-    board.map(b=>`<tr><td>${b.a}</td><td>${AED(b.t)}</td><td>${AED(b.av)}</td><td>${tag(b.pct+"%")}</td></tr>`).join("")+`</table>`;
+  let lb=`<table><tr><th>Agent</th><th>Target</th><th>Submission MRC</th><th>Activated</th><th>Pending Target</th><th>Ach %</th></tr>`+
+    board.map(b=>`<tr><td>${b.a}</td><td>${AED(b.t)}</td><td style="color:var(--amber)">${AED(b.sub)}</td><td style="color:var(--green)">${AED(b.av)}</td><td style="color:${b.pend>0?'var(--brand2)':'var(--green)'}">${AED(b.pend)}</td><td>${tag(b.pct+"%")}</td></tr>`).join("")+`</table>`;
 
   return k+`<div class="grid2">
     <div class="card"><h3>Pipeline by Stage</h3>${funnel}</div>
