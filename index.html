@@ -195,12 +195,39 @@ const PIPE_STAGES = ["10%- Prospect","30% - Value Prop","50% - Negotiation","70%
 const CALL_STATUS = ["Interested","FollowUp","Not interested","Using etisalat","Using DU","Voicemail","No answer","Number not in use"];
 const ORDER_STATUS = ["In Pipeline","Submitted","E& In-process","BO Pending","Waiting for Agent","Activated","Closed","On Hold","Cancelled","Returned"];
 const PRODUCTS = [
-  {id:"PR1", cat:"GSM (Mobile)", title:"Business First Plus", mrc:200},
-  {id:"PR2", cat:"GSM (Mobile)", title:"Business Extreme", mrc:600},
-  {id:"PR3", cat:"Fixed", title:"SOHO3", mrc:475},
-  {id:"PR4", cat:"Fixed", title:"Business On4", mrc:395},
-  {id:"PR5", cat:"Wireless", title:"IP Connect Access5", mrc:500},
-  {id:"PR6", cat:"Digital", title:"Digital Internet", mrc:300}
+  {id:"PR1", cat:"Fixed", title:"Business Pro New", mrc:0},
+  {id:"PR2", cat:"Fixed", title:"Business Pro Mig", mrc:0},
+  {id:"PR3", cat:"Fixed", title:"Business On New", mrc:0},
+  {id:"PR4", cat:"Fixed", title:"Business On Mig", mrc:0},
+  {id:"PR5", cat:"Fixed", title:"SOHO", mrc:0},
+  {id:"PR6", cat:"Fixed", title:"BQS", mrc:0},
+  {id:"PR7", cat:"Fixed", title:"Office Presence", mrc:0},
+  {id:"PR8", cat:"Fixed", title:"Dell / PABX", mrc:0},
+  {id:"PR9", cat:"Fixed", title:"Toll Free", mrc:0},
+  {id:"PR10", cat:"Fixed", title:"Digital Internet", mrc:0},
+  {id:"PR11", cat:"Fixed", title:"Digital Premium Internet", mrc:0},
+  {id:"PR12", cat:"Fixed", title:"SIP Trunk", mrc:0},
+  {id:"PR13", cat:"Fixed", title:"PRI", mrc:0},
+  {id:"PR14", cat:"Fixed", title:"SD WAN", mrc:0},
+  {id:"PR15", cat:"Fixed", title:"Business TV", mrc:0},
+  {id:"PR16", cat:"Fixed", title:"Business Flat Plus", mrc:0},
+  {id:"PR17", cat:"Fixed", title:"Business Super", mrc:0},
+  {id:"PR18", cat:"Fixed", title:"Add Lines", mrc:0},
+  {id:"PR19", cat:"Fixed", title:"Global MPLS", mrc:0},
+  {id:"PR20", cat:"Mobile", title:"ATL Plans", mrc:0},
+  {id:"PR21", cat:"Mobile", title:"BTL Plans", mrc:0},
+  {id:"PR22", cat:"Mobile", title:"Data Sims", mrc:0},
+  {id:"PR23", cat:"Digital", title:"UTAP", mrc:0},
+  {id:"PR24", cat:"Digital", title:"Office 365", mrc:0},
+  {id:"PR25", cat:"Digital", title:"Online Marketing", mrc:0},
+  {id:"PR26", cat:"Digital", title:"VSAAS", mrc:0},
+  {id:"PR27", cat:"Digital", title:"DGTX", mrc:0},
+  {id:"PR28", cat:"Digital", title:"M2M", mrc:0},
+  {id:"PR29", cat:"Digital", title:"SVT", mrc:0},
+  {id:"PR30", cat:"Digital", title:"APP 360", mrc:0},
+  {id:"PR31", cat:"Digital", title:"Social eCommerce", mrc:0},
+  {id:"PR32", cat:"Digital", title:"Cloud", mrc:0},
+  {id:"PR33", cat:"Digital", title:"SMS", mrc:0}
 ];
 
 const ROLES = {
@@ -333,7 +360,7 @@ function seed(){
   return {employees,dsr,pipeline,orders,invoices,notifications,products,threads,access,caps,counters:{dsr:seq}};
 }
 
-const DBKEY="digicoo_db_v9";
+const DBKEY="digicoo_db_v10";
 let DB = load();
 function load(){ try{const s=localStorage.getItem(DBKEY); if(s){const d=JSON.parse(s); if(!d.access)d.access=JSON.parse(JSON.stringify(ACCESS_DEFAULT)); if(!d.caps)d.caps=JSON.parse(JSON.stringify(CAP_DEFAULT)); if(!d.counters)d.counters={dsr:(d.dsr?d.dsr.length:0)}; if(!d.notifications)d.notifications=[]; if(!d.products)d.products=JSON.parse(JSON.stringify(PRODUCTS)); if(!d.threads)d.threads={}; if(d.employees)d.employees.forEach(e=>{ if(!e.username)e.username=defUser(e.name); if(!e.password)e.password=defUser(e.name)+"@2026"; }); return d;}}catch(e){} const d=seed(); localStorage.setItem(DBKEY,JSON.stringify(d)); return d; }
 function save(){ localStorage.setItem(DBKEY,JSON.stringify(DB)); try{ if(BC) BC.postMessage({t:Date.now()}); }catch(e){} }
