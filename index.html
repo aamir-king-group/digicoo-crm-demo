@@ -812,15 +812,15 @@ function openDeal(id){
 }
 const APPROVAL_LABEL={pending_tl:"⏳ Pending Team Leader",approved:"✓ Approved → Back Office",rejected:"✗ Rejected — back to agent"};
 function approvalBadge(p){ const a=p&&p.approval; if(!a)return '<span class="muted">—</span>'; const c=a==="approved"?"var(--green)":a==="rejected"?"var(--brand2)":"var(--amber)"; return `<span class="tag" style="background:${c}22;color:${c}">${APPROVAL_LABEL[a]||a}</span>`; }
-// Which desk currently holds the task
+// Which person currently holds the task (show their name)
 function currentHolder(p){
-  if(p.stage&&p.stage.includes("Lost")) return {who:"Closed / Lost",role:null};
-  if(p.stage&&p.stage.includes("100%")) return {who:"Back Office",role:"backoffice"};
-  if(p.approval==="approved") return {who:"Back Office",role:"backoffice"};
-  if(p.approval==="pending_tl") return {who:"Team Leader",role:"team_leader"};
-  if(p.approval==="rejected") return {who:"Agent",role:"agent"};
-  if(p.escalated) return {who:"Sales Head",role:"sales_head"};
-  return {who:"Agent",role:"agent"};
+  const bo=backOfficeNames()[0]||"Back Office";
+  if(p.stage&&p.stage.includes("100%")) return {who:bo,role:"backoffice"};
+  if(p.approval==="approved") return {who:bo,role:"backoffice"};
+  if(p.approval==="pending_tl") return {who:p.tl||"—",role:"team_leader"};
+  if(p.approval==="rejected") return {who:p.agent,role:"agent"};
+  if(p.escalated) return {who:salesHeadName()||"Sales Head",role:"sales_head"};
+  return {who:p.agent,role:"agent"};
 }
 function holderChip(p){
   const h=currentHolder(p); const c=h.role?(ROLE_COLOR[h.role]||"#93a1bd"):"#93a1bd";
