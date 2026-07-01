@@ -651,13 +651,14 @@ function addDSRModal(){
   openModal("Log Call — DSR Entry",`
     <div class="row"><div><label>Company</label><input id="m_co"></div><div><label>Contact No.</label><input id="m_cn0"></div></div>
     <label>Customer / Contact Person</label><input id="m_cu">
+    <label>Product of Interest</label><select id="m_pr"><option value="">— none / not sure yet —</option>${DB.products.map(p=>`<option value="${p.title}">${p.cat} - ${p.title}</option>`).join("")}</select>
     <div class="row"><div><label>Call Status</label><select id="m_st">${CALL_STATUS.map(s=>`<option>${s}</option>`).join("")}</select></div>
     <div><label>Connected?</label><select id="m_cn"><option>YES</option><option>NO</option></select></div></div>
     <label>Remarks</label><textarea id="m_re" rows="3"></textarea>
   `,()=>{
     const st=$("m_st").value;
     const _ag=SESSION.role==="agent"?SESSION.name:"Hira";
-    const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:_ag,tl:(DB.employees.find(x=>x.name===_ag)||{}).tl||"-",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
+    const entry={id:"D"+Date.now(),dsrNo:nextDsrNo(),date:new Date().toISOString().slice(0,10),agent:_ag,tl:(DB.employees.find(x=>x.name===_ag)||{}).tl||"-",company:$("m_co").value,contactNo:$("m_cn0").value,customer:$("m_cu").value,product:$("m_pr").value,status:st,remarks:$("m_re").value,connected:$("m_cn").value};
     addLog(entry,"DSR created · status set to "+st);
     DB.dsr.unshift(entry);
     notify(mgmtChain(entry.agent).slice(0,2), `New DSR ${entry.dsrNo} by ${entry.agent}: ${entry.company||'—'} (${st})`, {dsrNo:entry.dsrNo});
@@ -673,14 +674,16 @@ function updateDSR(id){
   const d=DB.dsr.find(x=>x.id===id);
   openModal(`Update — ${d.company}`,`
     <div class="row"><div><label>Customer / Contact</label><input id="u_cu" value="${d.customer||''}"></div><div><label>Contact No.</label><input id="u_cn0" value="${d.contactNo||''}"></div></div>
+    <label>Product of Interest</label><select id="u_pr"><option value="">— none / not sure yet —</option>${DB.products.map(p=>`<option value="${p.title}" ${p.title===d.product?'selected':''}>${p.cat} - ${p.title}</option>`).join("")}</select>
     <div class="row"><div><label>Call Status</label><select id="u_st">${CALL_STATUS.map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join("")}</select></div>
     <div><label>Connected?</label><select id="u_cn"><option ${d.connected==='YES'?'selected':''}>YES</option><option ${d.connected==='NO'?'selected':''}>NO</option></select></div></div>
     <label>Remarks</label><textarea id="u_re" rows="3">${d.remarks||''}</textarea>
   `,()=>{
-    const nv={customer:$("u_cu").value,contactNo:$("u_cn0").value,status:$("u_st").value,connected:$("u_cn").value,remarks:$("u_re").value};
+    const nv={customer:$("u_cu").value,contactNo:$("u_cn0").value,product:$("u_pr").value,status:$("u_st").value,connected:$("u_cn").value,remarks:$("u_re").value};
     if(nv.status!==d.status){ addLog(d,`Status: ${d.status} → ${nv.status}`); }
     if(nv.connected!==d.connected) addLog(d,`Connected: ${d.connected} → ${nv.connected}`);
     if(nv.customer!==(d.customer||"")) addLog(d,`Customer: "${d.customer||''}" → "${nv.customer}"`);
+    if(nv.product!==(d.product||"")) addLog(d,`Product of interest: ${nv.product||'—'}`);
     if(nv.contactNo!==(d.contactNo||"")) addLog(d,`Contact No updated`);
     if(nv.remarks!==(d.remarks||"")) addLog(d,`Remarks updated`);
     Object.assign(d,nv);
@@ -820,7 +823,6 @@ function openDeal(id){
     <div class="row"><div><label>Qty</label><input id="d_qt" type="number" value="${p.qty}"></div><div><label>Unit MRC</label><input id="d_pc" type="number" value="${p.price}"></div></div>
     <label>Stage</label><select id="d_st">${PIPE_STAGES.map(s=>`<option ${s===p.stage?'selected':''}>${s}</option>`).join("")}</select>
     <label>Remarks</label><textarea id="d_re" rows="2">${p.remarks||''}</textarea>
-    <div class="flag warn" style="margin-top:12px">Annual revenue if won: <b>${AED(p.annual)}</b></div>
   `,()=>{
     const oldStage=p.stage, oldProd=p.product, oldQty=p.qty, oldPrice=p.price, oldCust=p.customer||"", oldRem=p.remarks||"";
     p.customer=$("d_cu").value;p.product=$("d_pr").value;p.cat=$("d_pr").selectedOptions[0].dataset.cat||p.cat;p.qty=+$("d_qt").value;p.price=+$("d_pc").value;
@@ -885,7 +887,7 @@ function rejectDeal(id){
 function escalateDeal(id){ const p=DB.pipeline.find(x=>x.id===id); p.escalated=true; logByDsrNo(p.dsrNo,"Escalated to Sales Head (Amir Qadri)","Pipeline"); notify([salesHeadName(),...mgmtChain(p.agent).slice(0,2)], `⚑ Deal ${p.dsrNo} (${p.company}) escalated by ${SESSION.name}`, {dsrNo:p.dsrNo}); alert("Escalated to Sales Head (Amir Qadri) for support."); save(); closeModal(); render(); }
 function convertToPipeline(id){
   const d=DB.dsr.find(x=>x.id===id);
-  addDealModal({company:d.company,customer:d.customer,contactNo:d.contactNo,remarks:d.remarks,dsrNo:d.dsrNo},id);
+  addDealModal({company:d.company,customer:d.customer,contactNo:d.contactNo,remarks:d.remarks,dsrNo:d.dsrNo,product:d.product},id);
 }
 function addDealModal(prefill={},dsrId=null){
   const title=dsrId?"Convert DSR Lead → Pipeline":"New Opportunity";
@@ -893,7 +895,7 @@ function addDealModal(prefill={},dsrId=null){
     ${dsrId?'<div class="flag good" style="margin-top:0">Converting <b>'+(prefill.dsrNo||'')+'</b> — '+(prefill.company||'')+' — into a sales opportunity. The DSR number stays the same end-to-end.</div>':''}
     <div class="row"><div><label>Company</label><input id="n_co" value="${prefill.company||''}"></div><div><label>Contact No.</label><input id="n_cn0" value="${prefill.contactNo||''}"></div></div>
     <label>Customer / Contact</label><input id="n_cu" value="${prefill.customer||''}">
-    <label>Product</label><select id="n_pr" onchange="prodPick('n')">${DB.products.map(p=>`<option data-cat="${p.cat}" data-mrc="${p.mrc}">${p.title}</option>`).join("")}</select>
+    <label>Product</label><select id="n_pr" onchange="prodPick('n')">${DB.products.map(p=>`<option data-cat="${p.cat}" data-mrc="${p.mrc}" ${p.title===prefill.product?'selected':''}>${p.title}</option>`).join("")}</select>
     <div class="row"><div><label>Category</label><input id="n_cat" disabled></div><div><label>Qty</label><input id="n_qt" type="number" value="1"></div><div><label>Unit MRC (AED)</label><input id="n_pc" type="number"></div></div>
     <label>Stage</label><select id="n_st">${PIPE_STAGES.map(s=>`<option ${s.includes('10%')?'selected':''}>${s}</option>`).join("")}</select>
     <label>Remarks</label><textarea id="n_re" rows="2">${prefill.remarks||''}</textarea>
