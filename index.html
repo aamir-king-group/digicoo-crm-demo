@@ -21,6 +21,9 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:
 .btn-ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
 .btn-ghost:hover{border-color:var(--brand2)}
 input,select,textarea{font-family:inherit;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px;width:100%}
+input[type="date"]{color-scheme:dark;min-width:150px}
+input[type="date"]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
+input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
