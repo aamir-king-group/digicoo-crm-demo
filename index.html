@@ -846,7 +846,7 @@ function viewPipeline(){
     <div class="toolbar">
       <span class="muted">Deals enter only from DSR — Agent (mark a call "Interested" → Convert to Pipeline). Search any column · click Update to change stage, mark won, or escalate.</span>
     </div>
-    <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols)}${body}</table></div>`;
+    <div class="scroll"><table id="pTbl"><tr>${cols.map(c=>`<th>${c||''}</th>`).join("")}</tr>${colFilterRow(cols,{Product:[...new Set(pipe.map(p=>p.product).filter(Boolean))].sort(),Stage:PIPE_STAGES})}${body}</table></div>`;
 }
 function rowMenuPipe(id,ev){
   ev.stopPropagation();
@@ -1472,12 +1472,17 @@ function filterTable(id,q){
   document.querySelectorAll("#"+id+" tr").forEach((tr,i)=>{ if(i===0||tr.classList.contains("frow")||tr.classList.contains("fkeep"))return; tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"; });
 }
 // Per-column search: a filter row of inputs, each filtering only its own column
-function colFilterRow(cols){
-  return `<tr class="frow">${cols.map((c,i)=>`<th>${c===null?'':`<input class="colf" placeholder="search ${String(c).replace(/[^A-Za-z ].*/,'').trim()||'…'}" data-c="${i}" oninput="colSearch(this)">`}</th>`).join("")}</tr>`;
+function colFilterRow(cols,opts){
+  opts=opts||{};
+  return `<tr class="frow">${cols.map((c,i)=>{
+    if(c===null) return '<th></th>';
+    if(opts[c]) return `<th><select class="colf" data-c="${i}" onchange="colSearch(this)"><option value="">All</option>${opts[c].map(o=>`<option value="${o}">${o}</option>`).join("")}</select></th>`;
+    return `<th><input class="colf" placeholder="search ${String(c).replace(/[^A-Za-z ].*/,'').trim()||'…'}" data-c="${i}" oninput="colSearch(this)"></th>`;
+  }).join("")}</tr>`;
 }
 function colSearch(inp){
   const table=inp.closest("table");
-  const filters=[...table.querySelectorAll("tr.frow input.colf")].map(x=>({c:+x.dataset.c,v:x.value.trim().toLowerCase()})).filter(f=>f.v);
+  const filters=[...table.querySelectorAll("tr.frow .colf")].map(x=>({c:+x.dataset.c,v:(x.value||"").trim().toLowerCase()})).filter(f=>f.v);
   [...table.querySelectorAll("tr")].forEach((tr,idx)=>{
     if(idx===0||tr.classList.contains("frow")||tr.classList.contains("fkeep"))return;
     const cells=tr.children; let show=true;
