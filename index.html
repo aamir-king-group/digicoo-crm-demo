@@ -173,7 +173,7 @@ input.colf::placeholder{color:#5c6c8c}
   </aside>
   <main class="main">
     <div class="topbar">
-      <h1 id="pageTitle">Dashboard</h1>
+      <div style="display:flex;align-items:center;gap:16px"><h1 id="pageTitle">Dashboard</h1><div id="agentFilter"></div></div>
       <div class="who">
         <button class="bell" onclick="toggleNotif(event)" title="Notifications">🔔<span id="bellCount" class="bellbadge hidden">0</span></button>
         <div class="right"><div id="whoName" style="font-weight:700"></div><div class="muted" id="whoRole" style="font-size:12px"></div></div>
@@ -391,7 +391,7 @@ let CURRENT="dash";
    Cross-tab real-time via BroadcastChannel (+ storage fallback).
    In production this layer is replaced by server push (WebSocket).
    ============================================================ */
-var BC=null, toastedIds=new Set(), CASE_OPEN=null, SEEN={};
+var BC=null, toastedIds=new Set(), CASE_OPEN=null, SEEN={}, AGENT_FILTER="";
 try{ BC=new BroadcastChannel("digicoo_crm_"+DBKEY); BC.onmessage=onRemoteChange; }catch(e){}
 try{ window.addEventListener("storage",e=>{ if(e.key===DBKEY) onRemoteChange(); }); }catch(e){}
 function onRemoteChange(){
@@ -494,6 +494,8 @@ function doLogin(role,name){
   $("whoName").textContent=name;
   const wr=$("whoRole"); wr.textContent=ROLES[role].name; wr.className="rolepill";
   $("whoAv").textContent=name[0];
+  try{ AGENT_FILTER=localStorage.getItem("digicoo_agent_"+name)||""; }catch(e){ AGENT_FILTER=""; }
+  if(AGENT_FILTER && !baseVisibleAgents().includes(AGENT_FILTER)) AGENT_FILTER="";
   CURRENT="dash"; loadSeen(); renderNav(); render();
   toastedIds=new Set((DB.notifications||[]).map(n=>n.id)); renderBell();
 }
@@ -518,6 +520,7 @@ function render(){
     accounting:viewAccounting, ai:viewAI, admin:viewAdmin
   }[CURRENT])();
   renderBell();
+  renderAgentFilter();
   enhanceSelects($("view"));
 }
 
@@ -526,19 +529,38 @@ function descendantsOf(name){
   let res=[]; DB.employees.filter(e=>e.reportsTo===name).forEach(e=>{ res.push(e); res=res.concat(descendantsOf(e.name)); });
   return res;
 }
-function visibleAgents(){
+function baseVisibleAgents(){
   const r=SESSION.role, me=SESSION.name;
   if(r==="agent") return [me];
   if(r==="team_leader"||r==="teams_head") return descendantsOf(me).filter(e=>e.role==="agent").map(e=>e.name);
   // sales_head, admin, backoffice, accountant, hr see all agents
   return DB.employees.filter(e=>e.role==="agent").map(e=>e.name);
 }
+function visibleAgents(){
+  const base=baseVisibleAgents();
+  if(AGENT_FILTER && base.includes(AGENT_FILTER)) return [AGENT_FILTER];
+  return base;
+}
+// ---- Agent drill-down filter (TL/Teams Head/Sales Head can focus one agent) ----
+function setAgentFilter(v){ AGENT_FILTER=v||""; try{ localStorage.setItem("digicoo_agent_"+((SESSION&&SESSION.name)||"x"), AGENT_FILTER); }catch(e){} render(); }
+function renderAgentFilter(){
+  const el=document.getElementById("agentFilter"); if(!el) return;
+  if(!SESSION || ["agent","backoffice","accountant","hr"].includes(SESSION.role)){ el.innerHTML=""; return; }
+  const base=baseVisibleAgents();
+  if(base.length<=1){ el.innerHTML=""; return; }
+  el.innerHTML=`<span style="color:var(--muted);font-size:12px;margin-right:6px">Agent:</span>
+    <select onchange="setAgentFilter(this.value)" style="width:auto;min-width:150px">
+      <option value="">All Agents (${base.length})</option>
+      ${base.map(a=>`<option value="${a}" ${AGENT_FILTER===a?'selected':''}>${a}</option>`).join("")}
+    </select>`;
+  enhanceSelects(el);
+}
 /* ---------- Record-level privacy: a record is owned by the TL the agent
    reported to WHEN it was created (rec.tl). Reassigning an agent does NOT
    expose past records to the new TL. ---------- */
 function reportsUpTo(name,ancestor){ let cur=DB.employees.find(e=>e.name===name),g=0; while(cur&&cur.reportsTo&&g++<12){ if(cur.reportsTo===ancestor)return true; cur=DB.employees.find(e=>e.name===cur.reportsTo);} return false; }
 function myTLscope(){ const r=SESSION.role; if(r==="team_leader")return [SESSION.name]; if(r==="teams_head")return DB.employees.filter(e=>e.role==="team_leader"&&reportsUpTo(e.name,SESSION.name)).map(e=>e.name); return null; }
-function recVisible(rec){ if(!SESSION)return false; if(SESSION.role==="agent")return rec.agent===SESSION.name; const tls=myTLscope(); if(tls===null)return true; return tls.includes(rec.tl); }
+function recVisible(rec){ if(!SESSION)return false; if(AGENT_FILTER && rec.agent!==AGENT_FILTER) return false; if(SESSION.role==="agent")return rec.agent===SESSION.name; const tls=myTLscope(); if(tls===null)return true; return tls.includes(rec.tl); }
 
 /* ============================================================
    DASHBOARD
